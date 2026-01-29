@@ -28,12 +28,28 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   double _bgOpacity = 0.15;
   double _toolbarOpacity = 0.15;
   Note? _originalNote;
+  final FocusNode _titleFocusNode = FocusNode();
+  bool _isTitleFocused = false;
 
   @override
   void initState() {
     super.initState();
     _selectedColor = '#FFFFFF';
+    _titleFocusNode.addListener(() {
+      if (mounted) {
+        setState(() {
+          _isTitleFocused = _titleFocusNode.hasFocus;
+        });
+      }
+    });
     _loadNote();
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _titleFocusNode.dispose();
+    super.dispose();
   }
 
   Future<void> _loadNote() async {
@@ -107,6 +123,9 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
       } else {
         await ref.read(notesListProvider.notifier).addNote(note);
       }
+
+      // Force a tiny delay to ensure state propagates, though updateNote is async
+      await Future.delayed(const Duration(milliseconds: 50));
 
       _showMessage('Note saved successfully!');
 
@@ -182,17 +201,30 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                 decoration: BoxDecoration(
                   color: _selectedWallpaper != null
                       ? Colors.transparent
-                      : Color(
-                          int.parse(_selectedColor.replaceAll('#', '0xFF')),
-                        ),
+                      : (_selectedColor == '#FFFFFF'
+                            ? Theme.of(context).colorScheme.surface
+                            : Color(
+                                int.parse(
+                                  _selectedColor.replaceAll('#', '0xFF'),
+                                ),
+                              )),
                   image: _selectedWallpaper != null
                       ? DecorationImage(
                           image: AssetImage(_selectedWallpaper!),
                           fit: BoxFit.cover,
                           colorFilter: ColorFilter.mode(
-                            Color(
-                              int.parse(_selectedColor.replaceAll('#', '0xFF')),
-                            ).withValues(alpha: _bgOpacity),
+                            (_selectedColor == '#FFFFFF'
+                                    ? Colors
+                                          .black // Default blend for white/none
+                                    : Color(
+                                        int.parse(
+                                          _selectedColor.replaceAll(
+                                            '#',
+                                            '0xFF',
+                                          ),
+                                        ),
+                                      ))
+                                .withValues(alpha: _bgOpacity),
                             BlendMode.darken,
                           ),
                         )
@@ -207,10 +239,28 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                         children: [
                           // Space for the transparent appBar
                           const SizedBox(height: kToolbarHeight),
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                          // Premium Title Area with Animation
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
+                            margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: _isTitleFocused
+                                  ? Theme.of(context).colorScheme.primary
+                                        .withValues(alpha: 0.05)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _isTitleFocused
+                                    ? Theme.of(context).colorScheme.primary
+                                          .withValues(alpha: 0.2)
+                                    : Colors.transparent,
+                                width: 1.5,
+                              ),
+                            ),
                             child: TextField(
                               controller: _titleController,
+                              focusNode: _titleFocusNode,
                               decoration: InputDecoration(
                                 hintText: 'Title',
                                 border: InputBorder.none,
@@ -221,13 +271,21 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                                 ),
                               ),
                               style: Theme.of(context).textTheme.headlineSmall
-                                  ?.copyWith(fontWeight: FontWeight.bold),
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: -0.5,
+                                  ),
                             ),
                           ),
                           Expanded(
                             child: SimpleWorkingEditor(
                               initialContent: _richContent,
-                              toolbarOpacity: _toolbarOpacity,
+                              // Only use toolbarOpacity if we have a special background
+                              toolbarOpacity:
+                                  (_selectedWallpaper != null ||
+                                      _selectedColor != '#FFFFFF')
+                                  ? _toolbarOpacity
+                                  : 1.0,
                               onContentChanged: (content) {
                                 _richContent = content;
                               },
@@ -249,8 +307,25 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                             _isExistingNote ? 'Edit Note' : 'New Note',
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          backgroundColor: Colors.transparent,
-                          elevation: 0,
+                          // Use primary theme if no customization is selected for better visibility
+                          backgroundColor:
+                              (_selectedWallpaper != null ||
+                                  _selectedColor != '#FFFFFF')
+                              ? Colors.transparent
+                              : Theme.of(context).colorScheme.primary,
+                          foregroundColor:
+                              (_selectedWallpaper != null ||
+                                  _selectedColor != '#FFFFFF')
+                              ? Theme.of(context).colorScheme.onSurface
+                              : Theme.of(context).colorScheme.onPrimary,
+                          elevation:
+                              (_selectedWallpaper != null ||
+                                  _selectedColor != '#FFFFFF')
+                              ? 0
+                              : 4,
+                          shadowColor: Theme.of(
+                            context,
+                          ).colorScheme.shadow.withValues(alpha: 0.2),
                           surfaceTintColor: Colors.transparent,
                           actions: [
                             IconButton(

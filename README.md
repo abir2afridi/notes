@@ -1,4 +1,4 @@
-# NoteKeeper - Google Keep Clone
+# NoteKeeper 
 
 A full-featured Google Keep–like note-taking Android application built with Flutter, featuring clean architecture, Material 3 design, and offline-first storage.
 
