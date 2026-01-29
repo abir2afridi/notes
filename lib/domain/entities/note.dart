@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../data/models/rich_note_model.dart';
 
 class Note extends Equatable {
   final String id;
@@ -7,6 +8,7 @@ class Note extends Equatable {
   final String type; // 'text' or 'checklist'
   final DateTime createdAt;
   final DateTime modifiedAt;
+  final RichNoteContent? richContent;
   final DateTime? reminderAt;
   final String backgroundColor;
   final bool isPinned;
@@ -17,6 +19,8 @@ class Note extends Equatable {
   final List<String> attachments;
   final List<ChecklistItem> checklistItems;
   final String? metadata;
+  final double bgOpacity;
+  final double toolbarOpacity;
 
   const Note({
     required this.id,
@@ -31,10 +35,13 @@ class Note extends Equatable {
     this.isArchived = false,
     this.isDeleted = false,
     this.backgroundImagePath,
+    this.richContent,
     this.labelIds = const [],
     this.attachments = const [],
     this.checklistItems = const [],
     this.metadata,
+    this.bgOpacity = 0.15,
+    this.toolbarOpacity = 0.15,
   });
 
   Note copyWith({
@@ -54,6 +61,9 @@ class Note extends Equatable {
     List<ChecklistItem>? checklistItems,
     String? backgroundImagePath,
     String? metadata,
+    RichNoteContent? richContent,
+    double? bgOpacity,
+    double? toolbarOpacity,
   }) {
     return Note(
       id: id ?? this.id,
@@ -72,6 +82,9 @@ class Note extends Equatable {
       checklistItems: checklistItems ?? this.checklistItems,
       backgroundImagePath: backgroundImagePath ?? this.backgroundImagePath,
       metadata: metadata ?? this.metadata,
+      richContent: richContent ?? this.richContent,
+      bgOpacity: bgOpacity ?? this.bgOpacity,
+      toolbarOpacity: toolbarOpacity ?? this.toolbarOpacity,
     );
   }
 
@@ -93,6 +106,9 @@ class Note extends Equatable {
     checklistItems,
     backgroundImagePath,
     metadata,
+    richContent,
+    bgOpacity,
+    toolbarOpacity,
   ];
 }
 

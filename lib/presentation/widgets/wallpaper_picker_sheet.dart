@@ -4,12 +4,14 @@ class WallpaperPickerSheet extends StatelessWidget {
   final List<String> wallpapers;
   final String? selectedPath;
   final bool allowNoWallpaper;
+  final Function(String?) onWallpaperSelected;
 
   const WallpaperPickerSheet({
     super.key,
     required this.wallpapers,
     this.selectedPath,
     this.allowNoWallpaper = true,
+    required this.onWallpaperSelected,
   });
 
   @override
@@ -20,7 +22,7 @@ class WallpaperPickerSheet extends StatelessWidget {
       height: 4,
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: theme.colorScheme.onSurfaceVariant.withOpacity(0.4),
+        color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(12),
       ),
     );
@@ -50,7 +52,10 @@ class WallpaperPickerSheet extends StatelessWidget {
                 trailing: selectedPath == null
                     ? Icon(Icons.check, color: theme.colorScheme.primary)
                     : null,
-                onTap: () => Navigator.of(context).pop(''),
+                onTap: () {
+                  onWallpaperSelected(null);
+                  Navigator.of(context).pop();
+                },
               ),
             if (allowNoWallpaper) const SizedBox(height: 8),
             if (wallpapers.isEmpty)
@@ -78,7 +83,10 @@ class WallpaperPickerSheet extends StatelessWidget {
                     final path = wallpapers[index];
                     final isSelected = path == selectedPath;
                     return GestureDetector(
-                      onTap: () => Navigator.of(context).pop(path),
+                      onTap: () {
+                        onWallpaperSelected(path);
+                        Navigator.of(context).pop();
+                      },
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
@@ -88,7 +96,9 @@ class WallpaperPickerSheet extends StatelessWidget {
                               path,
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) => Container(
-                                color: theme.colorScheme.surfaceVariant,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
                                 alignment: Alignment.center,
                                 child: const Icon(Icons.broken_image),
                               ),
@@ -106,8 +116,10 @@ class WallpaperPickerSheet extends StatelessWidget {
                                   width: 3,
                                 ),
                                 color: isSelected
-                                    ? theme.colorScheme.primary.withOpacity(0.1)
-                                    : Colors.black26,
+                                    ? theme.colorScheme.primary.withValues(
+                                        alpha: 0.1,
+                                      )
+                                    : Colors.black.withValues(alpha: 0.1),
                               ),
                             ),
                           ),

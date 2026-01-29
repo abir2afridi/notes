@@ -1,4 +1,5 @@
-import 'package:hive/hive.dart';
+import 'package:flutter/foundation.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../../models/note_model.dart';
 import '../../models/label_model.dart';
 
@@ -7,14 +8,60 @@ class LocalDataSource {
   static const String _labelsBoxName = 'labels_box';
   static const String _settingsBoxName = 'settings_box';
 
+  static const int _currentSchemaVersion = 2; // Incremented for versioning
+
   late Box<NoteModel> _notesBox;
   late Box<LabelModel> _labelsBox;
   late Box _settingsBox;
 
   Future<void> init() async {
-    _notesBox = await Hive.openBox<NoteModel>(_notesBoxName);
-    _labelsBox = await Hive.openBox<LabelModel>(_labelsBoxName);
-    _settingsBox = await Hive.openBox(_settingsBoxName);
+    try {
+      _notesBox = await Hive.openBox<NoteModel>(_notesBoxName);
+      _labelsBox = await Hive.openBox<LabelModel>(_labelsBoxName);
+      _settingsBox = await Hive.openBox(_settingsBoxName);
+
+      await _handleMigration();
+    } catch (e) {
+      debugPrint('HIVE BOX OPEN FAIL: $e. Attempting repair...');
+      await _emergencyRepair();
+    }
+  }
+
+  Future<void> _handleMigration() async {
+    final lastVersion = _settingsBox.get('schema_version', defaultValue: 1);
+
+    if (lastVersion < _currentSchemaVersion) {
+      debugPrint(
+        'Migrating database from $lastVersion to $_currentSchemaVersion',
+      );
+
+      try {
+        if (lastVersion == 1) {
+          // Migration from v1: Ensure all notes are valid
+          for (final note in _notesBox.values) {
+            // Logic to ensure data integrity
+            await _notesBox.put(note.id, note);
+          }
+        }
+
+        await _settingsBox.put('schema_version', _currentSchemaVersion);
+        debugPrint('Migration successful');
+      } catch (e) {
+        debugPrint('Migration Error: $e');
+      }
+    }
+  }
+
+  Future<void> _emergencyRepair() async {
+    // Only wipe as a last resort if box is totally unreadable
+    try {
+      await Hive.deleteBoxFromDisk(_notesBoxName);
+      _notesBox = await Hive.openBox<NoteModel>(_notesBoxName);
+      _labelsBox = await Hive.openBox<LabelModel>(_labelsBoxName);
+      _settingsBox = await Hive.openBox(_settingsBoxName);
+    } catch (e) {
+      debugPrint('Emergency repair failed: $e');
+    }
   }
 
   // Notes Operations

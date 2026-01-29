@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
 import '../../core/constants/app_constants.dart';
-import '../providers/first_launch_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -49,32 +49,51 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     _logoController.forward();
     _textController.forward();
 
-    // FAIL-SAFE: Always navigate after 5 seconds total if something hangs
-    final navigationTimer = Timer(const Duration(seconds: 5), () {
+    // 1. HARD FAIL-SAFE: The Absolute Deadline
+    final hardDeadline = Timer(const Duration(seconds: 6), () {
+      debugPrint('SPLASH TIMEOUT: Force-navigating to home.');
       if (mounted) context.go('/home');
     });
 
     try {
-      // Ensure splash shows for minimum 1.5s
-      await Future.delayed(const Duration(milliseconds: 1500));
+      // 2. Parallel Startup Sequence with specific timeouts
+      final results = await Future.wait([
+        SharedPreferences.getInstance().timeout(const Duration(seconds: 3)),
+        Future.delayed(const Duration(milliseconds: 1800)), // Visual minimum
+      ]).timeout(const Duration(seconds: 5));
 
-      final prefs = await SharedPreferences.getInstance().timeout(
-        const Duration(seconds: 2),
-      );
+      final SharedPreferences prefs = results[0] as SharedPreferences;
+
+      // 3. Firebase (if enabled) - Non-blocking relative to splash duration
+      if (AppConstants.firebaseSyncEnabled) {
+        await Firebase.initializeApp()
+            .catchError((e) {
+              debugPrint('Firebase init within splash failed: $e');
+              return Firebase.app();
+            })
+            .timeout(const Duration(seconds: 2));
+      }
+
+      // 4. Versioned Installation Detection
+      final currentVersion = AppConstants.appVersion;
+      final lastRunVersion = prefs.getString('last_run_version') ?? '';
       final isFirstLaunch = prefs.getBool('is_first_launch') ?? true;
 
-      navigationTimer.cancel(); // Cancel fail-safe as we have the result
+      await prefs.setString('last_run_version', currentVersion);
+
+      hardDeadline.cancel();
 
       if (mounted) {
-        if (isFirstLaunch) {
+        // Only show onboarding for absolute fresh installs on this device
+        if (isFirstLaunch && lastRunVersion.isEmpty) {
           context.go('/onboarding');
         } else {
           context.go('/home');
         }
       }
     } catch (e) {
-      navigationTimer.cancel();
-      debugPrint('Error in splash navigation: $e');
+      hardDeadline.cancel();
+      debugPrint('SPLASH RECOVERY LOGIC TRIGGERED: $e');
       if (mounted) context.go('/home');
     }
   }
@@ -123,7 +142,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                           borderRadius: BorderRadius.circular(30),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.15),
+                              color: Colors.black.withValues(alpha: 0.15),
                               blurRadius: 30,
                               offset: const Offset(0, 15),
                             ),
@@ -167,7 +186,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                             'Capture ideas instantly',
                             style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(
-                                  color: Colors.white.withOpacity(0.9),
+                                  color: Colors.white.withValues(alpha: 0.9),
                                   letterSpacing: 0.5,
                                 ),
                           ),

@@ -10,6 +10,21 @@ final themeModeProvider =
       return ThemeModeNotifier();
     });
 
+enum AppThemeMode { light, dark, system }
+
+extension AppThemeModeExtension on AppThemeMode {
+  ThemeMode toThemeMode() {
+    switch (this) {
+      case AppThemeMode.light:
+        return ThemeMode.light;
+      case AppThemeMode.dark:
+        return ThemeMode.dark;
+      case AppThemeMode.system:
+        return ThemeMode.system;
+    }
+  }
+}
+
 class ThemeModeNotifier extends StateNotifier<AppThemeMode> {
   ThemeModeNotifier() : super(AppThemeMode.system) {
     _loadThemeMode();

@@ -1,14 +1,11 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:flutter_quill/flutter_quill.dart' as quill;
+import '../widgets/rich_text_editor.dart';
+// import '../widgets/wallpaper_picker_sheet.dart'; // No longer used as integrated
+import '../../data/models/rich_note_model.dart';
 import '../../domain/entities/note.dart';
-import '../../core/constants/app_constants.dart';
 import '../providers/note_provider.dart';
-import '../providers/settings_providers.dart';
-import '../utils/wallpaper_loader.dart';
-import '../widgets/wallpaper_picker_sheet.dart';
 
 class NoteEditorScreen extends ConsumerStatefulWidget {
   final String? noteId;
@@ -22,388 +19,522 @@ class NoteEditorScreen extends ConsumerStatefulWidget {
 
 class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
   final TextEditingController _titleController = TextEditingController();
-  late quill.QuillController _contentController;
+  RichNoteContent? _richContent;
   late String _selectedColor;
   String? _selectedWallpaper;
   bool _isLoading = false;
   bool _isExistingNote = false;
+  bool _isPinned = false;
+  double _bgOpacity = 0.15;
+  double _toolbarOpacity = 0.15;
   Note? _originalNote;
 
   @override
   void initState() {
     super.initState();
-    _contentController = quill.QuillController.basic();
-    _selectedColor = ref.read(defaultNoteColorProvider);
-    _selectedWallpaper = ref.read(defaultWallpaperProvider);
-    if (widget.noteId != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _loadNote();
-      });
-    }
+    _selectedColor = '#FFFFFF';
+    _loadNote();
   }
 
   Future<void> _loadNote() async {
-    final repository = ref.read(noteRepositoryProvider);
-    final note = await repository.getNoteById(widget.noteId!);
+    if (widget.noteId != null) {
+      if (mounted) {
+        setState(() {
+          _isLoading = true;
+          _isExistingNote = true;
+        });
+      }
 
-    if (!mounted) return;
-
-    if (note != null) {
-      setState(() {
+      try {
+        final notes = ref.read(notesListProvider);
+        final note = notes.firstWhere((n) => n.id == widget.noteId);
         _originalNote = note;
-        _isExistingNote = true;
         _titleController.text = note.title;
-
-        // Load Quill Delta from metadata if available, otherwise from plain text content
-        if (note.metadata != null && note.metadata!.isNotEmpty) {
-          try {
-            final json = jsonDecode(note.metadata!);
-            _contentController = quill.QuillController(
-              document: quill.Document.fromJson(json),
-              selection: const TextSelection.collapsed(offset: 0),
-            );
-          } catch (e) {
-            debugPrint('Failed to decode metadata (Delta): $e');
-            _loadPlaintextContent(note.content);
-          }
-        } else {
-          _loadPlaintextContent(note.content);
-        }
-
+        _richContent = note.richContent ?? RichNoteContent.empty();
         _selectedColor = note.backgroundColor;
-        _selectedWallpaper = note.backgroundImagePath ?? _selectedWallpaper;
-      });
+        _selectedWallpaper = note.backgroundImagePath;
+        _isPinned = note.isPinned;
+        _bgOpacity = note.bgOpacity;
+        _toolbarOpacity = note.toolbarOpacity;
+      } catch (e) {
+        _isExistingNote = false;
+        _richContent = RichNoteContent.empty();
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    } else {
+      _richContent = RichNoteContent.empty();
     }
   }
 
-  void _loadPlaintextContent(String content) {
-    if (content.isNotEmpty) {
-      _contentController = quill.QuillController(
-        document: quill.Document()..insert(0, content),
-        selection: const TextSelection.collapsed(offset: 0),
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _titleController.dispose();
-    _contentController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _openWallpaperSheet() async {
-    final messenger = ScaffoldMessenger.of(context);
-    final wallpapers = await WallpaperLoader.loadWallpapers();
-
-    if (!mounted) return;
-
-    if (wallpapers.isEmpty) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('No wallpapers found in assets/wallpaper_backgrund'),
-        ),
-      );
-      return;
-    }
-
-    final selectedPath = await showModalBottomSheet<String>(
-      context: context,
-      useSafeArea: true,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (sheetContext) => WallpaperPickerSheet(
-        wallpapers: wallpapers,
-        selectedPath: _selectedWallpaper,
-        allowNoWallpaper: true,
-      ),
-    );
-
-    if (!mounted || selectedPath == null) return;
-
-    setState(() {
-      _selectedWallpaper = selectedPath.isEmpty ? null : selectedPath;
-    });
-  }
-
-  Future<void> _saveOrDeleteParams() async {
-    final title = _titleController.text.trim();
-    final content = _contentController.document.toPlainText().trim();
-
-    if (title.isEmpty && content.isEmpty) return;
-
-    await _saveNote(silent: true);
-  }
-
-  Future<void> _saveNote({bool silent = false}) async {
-    final title = _titleController.text.trim();
-    final plainText = _contentController.document.toPlainText().trim();
-
-    if (title.isEmpty && plainText.isEmpty) {
-      if (!silent) _showMessage('Please add a title or content');
-      return;
-    }
-
-    if (!silent) {
-      setState(() {
-        _isLoading = true;
-      });
+  Future<void> _saveNote() async {
+    if (mounted) {
+      setState(() => _isLoading = true);
     }
 
     try {
       final now = DateTime.now();
-      final noteId = widget.noteId ?? now.millisecondsSinceEpoch.toString();
+      final note =
+          (_originalNote ??
+                  Note(
+                    id:
+                        widget.noteId ??
+                        DateTime.now().millisecondsSinceEpoch.toString(),
+                    title: '',
+                    content: '',
+                    type: widget.noteType,
+                    createdAt: now,
+                    modifiedAt: now,
+                  ))
+              .copyWith(
+                title: _titleController.text,
+                content: _richContent?.plainText ?? '',
+                richContent: _richContent,
+                backgroundColor: _selectedColor,
+                backgroundImagePath: _selectedWallpaper,
+                isPinned: _isPinned,
+                bgOpacity: _bgOpacity,
+                toolbarOpacity: _toolbarOpacity,
+                modifiedAt: now,
+              );
 
-      // Save content as plain text (for search/preview) and metadata as Delta JSON
-      final deltaJson = jsonEncode(
-        _contentController.document.toDelta().toJson(),
-      );
-
-      final note = Note(
-        id: noteId,
-        title: title,
-        content: plainText,
-        metadata: deltaJson,
-        type: widget.noteType,
-        createdAt: _isExistingNote ? _originalNote?.createdAt ?? now : now,
-        modifiedAt: now,
-        backgroundColor: _selectedColor,
-        isPinned: _originalNote?.isPinned ?? false,
-        isArchived: _originalNote?.isArchived ?? false,
-        isDeleted: _originalNote?.isDeleted ?? false,
-        backgroundImagePath: _selectedWallpaper,
-        labelIds: _originalNote?.labelIds ?? [],
-        attachments: _originalNote?.attachments ?? [],
-        checklistItems: _originalNote?.checklistItems ?? [],
-        reminderAt: _originalNote?.reminderAt,
-      );
-
-      if (widget.noteId == null) {
-        await ref.read(notesListProvider.notifier).addNote(note);
-      } else {
+      if (_isExistingNote) {
         await ref.read(notesListProvider.notifier).updateNote(note);
+      } else {
+        await ref.read(notesListProvider.notifier).addNote(note);
       }
 
-      if (mounted && !silent) {
-        _showMessage('Note saved successfully');
-        Navigator.of(context).pop();
+      _showMessage('Note saved successfully!');
+
+      if (mounted) {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/home');
+        }
       }
     } catch (e) {
-      if (mounted && !silent) {
-        _showMessage('Error saving note: $e');
-      }
+      _showMessage('Failed to save note');
     } finally {
-      if (mounted && !silent) {
-        setState(() {
-          _isLoading = false;
-        });
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _deleteNote() async {
+    if (widget.noteId == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Note'),
+        content: const Text('Are you sure you want to delete this note?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('CANCEL'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('DELETE', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await ref.read(notesListProvider.notifier).moveToTrash(widget.noteId!);
+      if (mounted) {
+        context.pop();
       }
     }
   }
 
   void _showMessage(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
     );
   }
 
-  Color _parseColor(String colorString) {
-    try {
-      return Color(int.parse(colorString.replaceFirst('#', '0xFF')));
-    } catch (e) {
-      return Colors.white;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final hasWallpaper =
-        _selectedWallpaper != null && _selectedWallpaper!.isNotEmpty;
-    final decorationImage = hasWallpaper
-        ? DecorationImage(
-            image: AssetImage(_selectedWallpaper!),
-            fit: BoxFit.cover,
-          )
-        : null;
-    final baseBackgroundColor = _selectedColor == '#FFFFFF'
-        ? Theme.of(context).scaffoldBackgroundColor
-        : _parseColor(_selectedColor);
-    final scaffoldBackgroundColor = hasWallpaper
-        ? Colors.black
-        : baseBackgroundColor;
-
-    final appBarBackgroundColor = hasWallpaper
-        ? Colors.black.withOpacity(0.6)
-        : _selectedColor == '#FFFFFF'
-        ? Theme.of(context).colorScheme.primary
-        : baseBackgroundColor;
-
-    final appBarForegroundColor = hasWallpaper
-        ? Colors.white
-        : _selectedColor == '#FFFFFF'
-        ? Theme.of(context).colorScheme.onPrimary
-        : Colors.black87;
-
-    final titleTextColor = hasWallpaper
-        ? Colors.white
-        : _selectedColor == '#FFFFFF'
-        ? null
-        : Colors.black87;
-
     return PopScope(
-      canPop: false,
-      onPopInvoked: (didPop) async {
-        if (didPop) return;
-        await _saveOrDeleteParams();
-        if (mounted) Navigator.of(context).pop();
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          _saveNote();
+        }
       },
       child: Scaffold(
-        backgroundColor: scaffoldBackgroundColor,
-        appBar: AppBar(
-          title: Text(widget.noteId == null ? 'New Note' : 'Edit Note'),
-          backgroundColor: appBarBackgroundColor,
-          foregroundColor: appBarForegroundColor,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () async {
-              await _saveOrDeleteParams();
-              if (mounted) Navigator.of(context).pop();
-            },
-          ),
-          actions: [
-            if (_isLoading)
-              const Padding(
-                padding: EdgeInsets.all(16),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                  ),
+        resizeToAvoidBottomInset: true,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Container(
+                width: double.infinity,
+                height: double.infinity,
+                decoration: BoxDecoration(
+                  color: _selectedWallpaper != null
+                      ? Colors.transparent
+                      : Color(
+                          int.parse(_selectedColor.replaceAll('#', '0xFF')),
+                        ),
+                  image: _selectedWallpaper != null
+                      ? DecorationImage(
+                          image: AssetImage(_selectedWallpaper!),
+                          fit: BoxFit.cover,
+                          colorFilter: ColorFilter.mode(
+                            Color(
+                              int.parse(_selectedColor.replaceAll('#', '0xFF')),
+                            ).withValues(alpha: _bgOpacity),
+                            BlendMode.darken,
+                          ),
+                        )
+                      : null,
                 ),
-              ),
-            if (!_isLoading) ...[
-              IconButton(
-                icon: const Icon(Icons.wallpaper),
-                onPressed: _openWallpaperSheet,
-                tooltip: 'Change wallpaper',
-              ),
-              IconButton(icon: const Icon(Icons.save), onPressed: _saveNote),
-              PopupMenuButton<String>(
-                onSelected: (value) {
-                  switch (value) {
-                    case 'color':
-                      _showColorPicker();
-                      break;
-                    case 'delete':
-                      _deleteNote();
-                      break;
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'color',
-                    child: Row(
-                      children: [
-                        Icon(Icons.palette),
-                        SizedBox(width: 8),
-                        Text('Change color'),
-                      ],
-                    ),
-                  ),
-                  if (widget.noteId != null)
-                    const PopupMenuItem(
-                      value: 'delete',
-                      child: Row(
+                child: Stack(
+                  children: [
+                    // Main Content Scrollable
+                    SafeArea(
+                      bottom: false,
+                      child: Column(
                         children: [
-                          Icon(Icons.delete),
-                          SizedBox(width: 8),
-                          Text('Delete'),
+                          // Space for the transparent appBar
+                          const SizedBox(height: kToolbarHeight),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                            child: TextField(
+                              controller: _titleController,
+                              decoration: InputDecoration(
+                                hintText: 'Title',
+                                border: InputBorder.none,
+                                hintStyle: TextStyle(
+                                  color: Theme.of(context).colorScheme.onSurface
+                                      .withValues(alpha: 0.4),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              style: Theme.of(context).textTheme.headlineSmall
+                                  ?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          Expanded(
+                            child: SimpleWorkingEditor(
+                              initialContent: _richContent,
+                              toolbarOpacity: _toolbarOpacity,
+                              onContentChanged: (content) {
+                                _richContent = content;
+                              },
+                              placeholder: 'Start typing...',
+                              autoFocus: true,
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                ],
+                    // Transparent Positioned AppBar
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: SafeArea(
+                        child: AppBar(
+                          title: Text(
+                            _isExistingNote ? 'Edit Note' : 'New Note',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          backgroundColor: Colors.transparent,
+                          elevation: 0,
+                          surfaceTintColor: Colors.transparent,
+                          actions: [
+                            IconButton(
+                              icon: const Icon(Icons.save),
+                              onPressed: _saveNote,
+                            ),
+                            IconButton(
+                              icon: Icon(
+                                _isPinned
+                                    ? Icons.push_pin
+                                    : Icons.push_pin_outlined,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _isPinned = !_isPinned;
+                                });
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.more_vert),
+                              onPressed: () => _showMoreOptions(context),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ],
-        ),
-        body: Container(
-          decoration: BoxDecoration(
-            color: hasWallpaper ? Colors.black : null,
-            image: decorationImage,
+      ),
+    );
+  }
+
+  void _showMoreOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setSheetState) => Container(
+          padding: EdgeInsets.fromLTRB(
+            20,
+            20,
+            20,
+            MediaQuery.of(context).viewInsets.bottom + 20,
           ),
-          child: Container(
-            decoration: BoxDecoration(
-              color: hasWallpaper
-                  ? Colors.black.withOpacity(0.35)
-                  : Colors.transparent,
-            ),
+          child: SingleChildScrollView(
             child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: TextField(
-                    controller: _titleController,
-                    decoration: InputDecoration(
-                      hintText: 'Title',
-                      border: InputBorder.none,
-                      hintStyle: TextStyle(
-                        color: hasWallpaper ? Colors.white70 : null,
+                const Center(
+                  child: Text(
+                    'Customize Note',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // Color Section
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  child: Row(
+                    children: [
+                      Icon(Icons.palette_outlined, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Background Color',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
-                    ),
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  height: 60,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _getAvailableColors().length,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    itemBuilder: (context, index) {
+                      final colorHex = _getAvailableColors()[index];
+                      final isSelected = _selectedColor == colorHex;
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() => _selectedColor = colorHex);
+                        },
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Color(
+                              int.parse(colorHex.replaceAll('#', '0xFF')),
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                            border: Border.all(
+                              color: isSelected
+                                  ? Theme.of(context).primaryColor
+                                  : Colors.grey.withValues(alpha: 0.2),
+                              width: isSelected ? 3 : 1,
+                            ),
+                          ),
+                          child: isSelected
+                              ? Icon(
+                                  Icons.check,
+                                  size: 20,
+                                  color:
+                                      ThemeData.estimateBrightnessForColor(
+                                            Color(
+                                              int.parse(
+                                                colorHex.replaceAll(
+                                                  '#',
+                                                  '0xFF',
+                                                ),
+                                              ),
+                                            ),
+                                          ) ==
+                                          Brightness.dark
+                                      ? Colors.white
+                                      : Colors.black,
+                                )
+                              : null,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Wallpaper Section
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  child: Row(
+                    children: [
+                      Icon(Icons.wallpaper_outlined, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Wallpapers',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  height: 90,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _getAvailableWallpapers().length + 1,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        // "None" option
+                        final isSelected = _selectedWallpaper == null;
+                        return GestureDetector(
+                          onTap: () =>
+                              setState(() => _selectedWallpaper = null),
+                          child: Container(
+                            width: 70,
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isSelected
+                                    ? Theme.of(context).primaryColor
+                                    : Colors.transparent,
+                                width: 2,
+                              ),
+                            ),
+                            child: const Center(
+                              child: Icon(Icons.block, color: Colors.grey),
+                            ),
+                          ),
+                        );
+                      }
+
+                      final wpPath = _getAvailableWallpapers()[index - 1];
+                      final isSelected = _selectedWallpaper == wpPath;
+                      return GestureDetector(
+                        onTap: () =>
+                            setState(() => _selectedWallpaper = wpPath),
+                        child: Container(
+                          width: 70,
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected
+                                  ? Theme.of(context).primaryColor
+                                  : Colors.transparent,
+                              width: 2,
+                            ),
+                            image: DecorationImage(
+                              image: AssetImage(wpPath),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                          child: isSelected
+                              ? Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.black26,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                )
+                              : null,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+                const Divider(),
+
+                // Sliders
+                ListTile(
+                  leading: const Icon(Icons.opacity),
+                  title: const Text('Background Visibility'),
+                  subtitle: Slider(
+                    value: _bgOpacity,
+                    min: 0.0,
+                    max: 1.0,
+                    onChanged: (val) {
+                      setSheetState(() => _bgOpacity = val);
+                      setState(() {});
+                    },
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.blur_on),
+                  title: const Text('Toolbar Visibility'),
+                  subtitle: Slider(
+                    value: _toolbarOpacity,
+                    min: 0.0,
+                    max: 1.0,
+                    onChanged: (val) {
+                      setSheetState(() => _toolbarOpacity = val);
+                      setState(() {});
+                    },
+                  ),
+                ),
+
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.delete_outline, color: Colors.red),
+                  title: const Text(
+                    'Delete Note',
                     style: TextStyle(
-                      fontSize: 24,
+                      color: Colors.red,
                       fontWeight: FontWeight.bold,
-                      color: titleTextColor,
-                    ),
-                    textCapitalization: TextCapitalization.sentences,
-                  ),
-                ),
-                if (!hasWallpaper)
-                  Divider(height: 1, color: Colors.grey.withOpacity(0.2)),
-                Expanded(
-                  child: quill.QuillEditor.basic(
-                    configurations: quill.QuillEditorConfigurations(
-                      controller: _contentController,
-                      readOnly: false,
-                      sharedConfigurations:
-                          const quill.QuillSharedConfigurations(
-                            locale: Locale('en'),
-                          ),
-                      placeholder: 'Start typing...',
-                      padding: const EdgeInsets.all(16),
-                      autoFocus: false,
-                      expands: true,
-                      customStyles: quill.DefaultStyles(
-                        placeHolder: quill.DefaultTextBlockStyle(
-                          TextStyle(
-                            fontSize: 16,
-                            color: hasWallpaper ? Colors.white54 : Colors.grey,
-                          ),
-                          const quill.VerticalSpacing(0, 0),
-                          const quill.VerticalSpacing(0, 0),
-                          null,
-                        ),
-                        paragraph: quill.DefaultTextBlockStyle(
-                          TextStyle(
-                            fontSize: 16,
-                            color: hasWallpaper ? Colors.white : Colors.black87,
-                            height: 1.5,
-                          ),
-                          const quill.VerticalSpacing(0, 0),
-                          const quill.VerticalSpacing(0, 0),
-                          null,
-                        ),
-                      ),
                     ),
                   ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _deleteNote();
+                  },
                 ),
-                _buildQuillToolbar(hasWallpaper),
               ],
             ),
           ),
@@ -412,125 +543,27 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
     );
   }
 
-  Widget _buildQuillToolbar(bool hasWallpaper) {
-    return Container(
-      decoration: BoxDecoration(
-        color: hasWallpaper ? Colors.black87 : Theme.of(context).cardColor,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: quill.QuillToolbar.simple(
-          configurations: quill.QuillSimpleToolbarConfigurations(
-            controller: _contentController,
-            showAlignmentButtons: false,
-            showDirection: false,
-            showFontFamily: false,
-            showFontSize: true,
-            showBoldButton: true,
-            showItalicButton: true,
-            showSmallButton: false,
-            showUnderLineButton: true,
-            showStrikeThrough: true,
-            showInlineCode: true,
-            showColorButton: true,
-            showBackgroundColorButton: true,
-            showClearFormat: true,
-            showListNumbers: true,
-            showListBullets: true,
-            showListCheck: true,
-            showCodeBlock: false,
-            showQuote: true,
-            showIndent: false,
-            showLink: true,
-            showUndo: true,
-            showRedo: true,
-            multiRowsDisplay: false,
-            sharedConfigurations: const quill.QuillSharedConfigurations(
-              locale: Locale('en'),
-            ),
-          ),
-        ),
-      ),
-    );
+  List<String> _getAvailableColors() {
+    return [
+      '#FFFFFF',
+      '#F28B82',
+      '#FBBC04',
+      '#FFF475',
+      '#CCFF90',
+      '#A7FFEB',
+      '#CBF0F8',
+      '#AECBFA',
+      '#D7AEFB',
+      '#FDCFE8',
+      '#E6C9A8',
+      '#E8EAED',
+    ];
   }
 
-  void _showColorPicker() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Choose color'),
-        content: SizedBox(
-          width: double.infinity,
-          child: Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: AppConstants.noteColors.map((color) {
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedColor = color;
-                  });
-                  Navigator.of(context).pop();
-                },
-                child: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: _parseColor(color),
-                    borderRadius: BorderRadius.circular(20),
-                    border: _selectedColor == color
-                        ? Border.all(color: Colors.black, width: 2)
-                        : null,
-                  ),
-                  child: _selectedColor == color
-                      ? const Icon(Icons.check, color: Colors.black, size: 20)
-                      : null,
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _deleteNote() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete note?'),
-        content: const Text('This note will be moved to trash.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              if (widget.noteId != null) {
-                ref.read(notesListProvider.notifier).deleteNote(widget.noteId!);
-              }
-              _showMessage('Note deleted');
-              context.go('/home');
-            },
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+  List<String> _getAvailableWallpapers() {
+    return List.generate(
+      13,
+      (i) => 'assets/wallpaper_backgrund/wall${i + 1}.jpg',
     );
   }
 }

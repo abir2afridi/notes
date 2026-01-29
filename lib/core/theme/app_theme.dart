@@ -1,34 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_color_utilities/material_color_utilities.dart';
-import '../../presentation/providers/settings_providers.dart';
 
-enum AppThemeMode { light, dark, system }
-
-extension AppThemeModeExtension on AppThemeMode {
-  ThemeMode toThemeMode() {
-    switch (this) {
-      case AppThemeMode.light:
-        return ThemeMode.light;
-      case AppThemeMode.dark:
-        return ThemeMode.dark;
-      case AppThemeMode.system:
-        return ThemeMode.system;
-    }
-  }
-}
-
-class ThemeModeNotifier extends StateNotifier<AppThemeMode> {
-  ThemeModeNotifier() : super(AppThemeMode.system);
-
-  void setThemeMode(AppThemeMode mode) {
-    state = mode;
-  }
-
-  ThemeMode get themeMode {
-    return state.toThemeMode();
-  }
-}
+// Dark theme provider
+final darkThemeProvider = Provider<ThemeData>((ref) => AppTheme.darkTheme);
 
 class AppTheme {
   static const Color primaryColor = Color(0xFFFFEB3B); // Google Keep yellow

@@ -68,7 +68,11 @@ class ArchivedScreen extends ConsumerWidget {
   }
 
   void _navigateHome(BuildContext context) {
-    Navigator.of(context).pop();
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/home');
+    }
   }
 }
 
@@ -215,6 +219,7 @@ void _showArchivedActions(BuildContext context, WidgetRef ref, Note note) {
                 await ref
                     .read(notesListProvider.notifier)
                     .unarchiveNote(note.id);
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Note restored to notes.')),
                 );
@@ -226,6 +231,7 @@ void _showArchivedActions(BuildContext context, WidgetRef ref, Note note) {
               onTap: () async {
                 Navigator.of(sheetContext).pop();
                 await ref.read(notesListProvider.notifier).moveToTrash(note.id);
+                if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Note moved to trash.')),
                 );

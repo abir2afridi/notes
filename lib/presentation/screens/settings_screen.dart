@@ -595,6 +595,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         wallpapers: wallpapers,
         selectedPath: current,
         allowNoWallpaper: true,
+        onWallpaperSelected: (wallpaperPath) {
+          Navigator.pop(sheetContext);
+          ref
+              .read(defaultWallpaperProvider.notifier)
+              .setDefaultWallpaper(wallpaperPath);
+        },
       ),
     );
 

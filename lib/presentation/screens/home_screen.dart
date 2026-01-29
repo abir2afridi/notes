@@ -126,7 +126,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   filled: true,
                   fillColor: Theme.of(
                     context,
-                  ).colorScheme.surfaceVariant.withOpacity(0.5),
+                  ).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 20),
                 ),
               ),
@@ -310,7 +310,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           note: notes[index],
           labelLookup: labels,
           defaultWallpaper: defaultWallpaper,
-          onTap: () => context.go('/note/${notes[index].id}'),
+          onTap: () => context.push('/note/${notes[index].id}'),
           onLongPress: () => _showNoteActions(notes[index]),
         );
       }, childCount: notes.length),
@@ -330,7 +330,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             note: notes[index],
             labelLookup: labels,
             defaultWallpaper: defaultWallpaper,
-            onTap: () => context.go('/note/${notes[index].id}'),
+            onTap: () => context.push('/note/${notes[index].id}'),
             onLongPress: () => _showNoteActions(notes[index]),
           ),
         );
@@ -447,7 +447,7 @@ class _NewNoteOption extends StatelessWidget {
     final theme = Theme.of(context);
     return ListTile(
       leading: CircleAvatar(
-        backgroundColor: theme.colorScheme.primary.withOpacity(0.12),
+        backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.12),
         foregroundColor: theme.colorScheme.primary,
         child: Icon(icon),
       ),

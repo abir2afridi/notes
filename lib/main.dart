@@ -15,56 +15,48 @@ import 'core/constants/app_constants.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Hive and Data Sources before running the app
+  // 1. Core Bootstrapping with Timeout & Error Boundary
   LocalDataSource? localDataSource;
+
   try {
-    // 1. Safe Hive Initialization
-    await Hive.initFlutter().timeout(const Duration(seconds: 4));
+    // Run initialization tasks in parallel where possible, with a global timeout
+    await Future.wait([
+      // A: Hive Initialization (Critical)
+      Hive.initFlutter(),
 
-    // 2. Resilient Adapter Registration (skip if already registered)
-    try {
-      if (!Hive.isAdapterRegistered(0))
-        Hive.registerAdapter(NoteModelAdapter());
-      if (!Hive.isAdapterRegistered(1))
-        Hive.registerAdapter(ChecklistItemModelAdapter());
-      if (!Hive.isAdapterRegistered(2))
-        Hive.registerAdapter(LabelModelAdapter());
-    } catch (e) {
-      debugPrint('Adapter error: $e');
-    }
+      // B: Firebase Initialization (Non-blocking fail-safe)
+      if (AppConstants.firebaseSyncEnabled)
+        Firebase.initializeApp().catchError((e) {
+          debugPrint('Firebase init failed: $e');
+          return Firebase.app();
+        }),
+    ]).timeout(
+      const Duration(seconds: 5),
+      onTimeout: () {
+        debugPrint('Bootstrap components timed out after 5s');
+        return [];
+      },
+    );
 
-    // 3. Initialize Firebase
-    if (AppConstants.firebaseSyncEnabled) {
-      await Firebase.initializeApp()
-          .catchError((e) {
-            debugPrint('Firebase init failed: $e');
-            return Firebase.app();
-          })
-          .timeout(const Duration(seconds: 4));
-    }
+    // 2. Resilient Adapter Registration
+    _registerAdapters();
 
-    // 4. Initialize LocalDataSource with a catch-all for corruption
+    // 3. Initialize Data Source with Internal Migration Logic
     localDataSource = LocalDataSource();
-    try {
-      await localDataSource.init().timeout(const Duration(seconds: 5));
-    } catch (e) {
-      debugPrint('LocalDataSource Init Error (possible corruption): $e');
-      // If boxes are corrupted after update, we clear them to prevent the stuck logo
-      // This is better than being stuck on the splash screen forever.
-      try {
-        await Hive.deleteFromDisk();
-        localDataSource = LocalDataSource();
-        await localDataSource.init();
-      } catch (innerError) {
-        debugPrint('Emergency data reset failed: $innerError');
-      }
-    }
+    await localDataSource.init().timeout(const Duration(seconds: 4));
+  } catch (e, stack) {
+    debugPrint('BOOTSTRAP CRITICAL ERROR: $e');
+    debugPrint('STACKTRACE: $stack');
 
-    debugPrint('Initialization completed successfully');
-  } catch (e) {
-    debugPrint('Critical Initialization failure: $e');
-    // Final fail-safe: Ensure localDataSource is at least defined
-    localDataSource ??= LocalDataSource();
+    // EMERGENCY RESCUE: If the above failed (likely DB corruption),
+    // attempt to provide a clean state or at least let the app run.
+    try {
+      localDataSource = LocalDataSource();
+      await localDataSource.init();
+    } catch (_) {
+      // If even this fails, we let the app run; the UI will show errors
+      // instead of freezing on splash.
+    }
   }
 
   runApp(
@@ -76,6 +68,22 @@ Future<void> main() async {
       child: const NoteKeeperApp(),
     ),
   );
+}
+
+void _registerAdapters() {
+  try {
+    if (!Hive.isAdapterRegistered(0)) {
+      Hive.registerAdapter(NoteModelAdapter());
+    }
+    if (!Hive.isAdapterRegistered(1)) {
+      Hive.registerAdapter(ChecklistItemModelAdapter());
+    }
+    if (!Hive.isAdapterRegistered(2)) {
+      Hive.registerAdapter(LabelModelAdapter());
+    }
+  } catch (e) {
+    debugPrint('Adapter registration warning: $e');
+  }
 }
 
 class NoteKeeperApp extends ConsumerWidget {

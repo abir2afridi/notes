@@ -26,6 +26,9 @@ dependencies:
   material_color_utilities: ^0.11.1
   dynamic_color: ^1.6.8
   
+  # Rich Text Editor
+  flutter_quill: ^11.5.0
+  
   # Icons
   cupertino_icons: ^1.0.6
   font_awesome_flutter: ^10.6.0
@@ -57,7 +60,6 @@ dependencies:
   permission_handler: ^11.1.0
   lottie: ^3.3.2
   flutter_markdown: ^0.7.7+1
-  flutter_quill: ^11.5.0
 
 dev_dependencies:
   flutter_test:

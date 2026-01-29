@@ -33,13 +33,16 @@ class NoteModelAdapter extends TypeAdapter<NoteModel> {
       checklistItems: (fields[13] as List).cast<ChecklistItemModel>(),
       backgroundImagePath: fields[14] as String?,
       metadata: fields[15] as String?,
+      richContent: fields[16] as RichNoteContent?,
+      bgOpacity: fields[17] as double,
+      toolbarOpacity: fields[18] as double,
     );
   }
 
   @override
   void write(BinaryWriter writer, NoteModel obj) {
     writer
-      ..writeByte(16)
+      ..writeByte(19)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -71,7 +74,13 @@ class NoteModelAdapter extends TypeAdapter<NoteModel> {
       ..writeByte(14)
       ..write(obj.backgroundImagePath)
       ..writeByte(15)
-      ..write(obj.metadata);
+      ..write(obj.metadata)
+      ..writeByte(16)
+      ..write(obj.richContent)
+      ..writeByte(17)
+      ..write(obj.bgOpacity)
+      ..writeByte(18)
+      ..write(obj.toolbarOpacity);
   }
 
   @override

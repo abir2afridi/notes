@@ -1,5 +1,6 @@
 import 'package:hive/hive.dart';
 import '../../domain/entities/note.dart';
+import 'rich_note_model.dart';
 
 part 'note_model.g.dart';
 
@@ -53,6 +54,15 @@ class NoteModel {
   @HiveField(15)
   final String? metadata;
 
+  @HiveField(16)
+  final RichNoteContent? richContent;
+
+  @HiveField(17)
+  final double bgOpacity;
+
+  @HiveField(18)
+  final double toolbarOpacity;
+
   const NoteModel({
     required this.id,
     required this.title,
@@ -70,6 +80,9 @@ class NoteModel {
     this.checklistItems = const [],
     this.backgroundImagePath,
     this.metadata,
+    this.richContent,
+    this.bgOpacity = 0.15,
+    this.toolbarOpacity = 0.15,
   });
 
   // Convert from Domain Entity
@@ -93,6 +106,8 @@ class NoteModel {
           .toList(),
       backgroundImagePath: note.backgroundImagePath,
       metadata: note.metadata,
+      bgOpacity: note.bgOpacity,
+      toolbarOpacity: note.toolbarOpacity,
     );
   }
 
@@ -115,6 +130,8 @@ class NoteModel {
       checklistItems: checklistItems.map((item) => item.toEntity()).toList(),
       backgroundImagePath: backgroundImagePath,
       metadata: metadata,
+      bgOpacity: bgOpacity,
+      toolbarOpacity: toolbarOpacity,
     );
   }
 
@@ -135,6 +152,8 @@ class NoteModel {
     List<ChecklistItemModel>? checklistItems,
     String? backgroundImagePath,
     String? metadata,
+    double? bgOpacity,
+    double? toolbarOpacity,
   }) {
     return NoteModel(
       id: id ?? this.id,
@@ -153,6 +172,8 @@ class NoteModel {
       checklistItems: checklistItems ?? this.checklistItems,
       backgroundImagePath: backgroundImagePath ?? this.backgroundImagePath,
       metadata: metadata ?? this.metadata,
+      bgOpacity: bgOpacity ?? this.bgOpacity,
+      toolbarOpacity: toolbarOpacity ?? this.toolbarOpacity,
     );
   }
 }
