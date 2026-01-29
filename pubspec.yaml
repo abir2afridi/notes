@@ -1,0 +1,78 @@
+name: note
+description: "A Google Keep-like note-taking app built with Flutter"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.10.7
+  flutter: ">=3.10.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # State Management
+  flutter_riverpod: ^2.4.9
+  riverpod_annotation: ^2.3.3
+  go_router: ^12.1.3
+
+  # Local Storage
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  path_provider: ^2.1.1
+  shared_preferences: ^2.2.2
+
+  # UI & Material Design
+  material_color_utilities: ^0.11.1
+  dynamic_color: ^1.6.8
+  
+  # Icons
+  cupertino_icons: ^1.0.6
+  font_awesome_flutter: ^10.6.0
+
+  # Media & Image Handling
+  image_picker: ^1.0.4
+  cached_network_image: ^3.3.0
+  
+  # Drawing
+  flutter_colorpicker: ^1.0.3
+  
+  # Utilities
+  intl: ^0.20.2
+  uuid: ^4.5.2
+  equatable: ^2.0.5
+  package_info_plus: ^4.2.0
+  url_launcher: ^6.2.1
+  share_plus: ^7.2.1
+  
+  # Security (Optional)
+  local_auth: ^2.1.6
+  
+  # Firebase (Feature flagged)
+  firebase_core: ^2.24.2
+  cloud_firestore: ^4.14.0
+  firebase_auth: ^4.16.0
+  
+  # Permissions
+  permission_handler: ^11.1.0
+  lottie: ^3.3.2
+  flutter_markdown: ^0.7.7+1
+  flutter_quill: ^11.5.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  
+  # Code Generation
+  riverpod_generator: ^2.3.9
+  build_runner: ^2.4.7
+  hive_generator: ^2.0.1
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/wallpaper_backgrund/
