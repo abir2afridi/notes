@@ -1,36 +1,47 @@
-# NoteKeeper 
+# NoteKeeper Changelog
 
 A full-featured Google Keep–like note-taking Android application built with Flutter, featuring clean architecture, Material 3 design, and offline-first storage.
 
 ## 🚀 Features
 
 ### Core Features
-- ✅ **Note Types**: Text notes and checklist notes
+- ✅ **Note Types**: Text notes with rich text editing (flutter_quill)
 - ✅ **Organization**: Labels/tags system for categorization
 - ✅ **Views**: Grid and list view toggle
 - ✅ **Search**: Real-time note filtering
 - ✅ **Archive & Trash**: Safe deletion workflow
-- ✅ **Themes**: Light, dark, and system theme support
-- ✅ **Material 3**: Modern Material You design
+- ✅ **Themes**: Light, dark, and system theme support with Material You
+- ✅ **Material 3**: Modern Material You design with dynamic colors
+- ✅ **Wallpapers**: Custom background images for notes
+- ✅ **Rich Text Editor**: Full-featured text editor with formatting
+- ✅ **State Management**: Riverpod with clean architecture
+- ✅ **Navigation**: GoRouter for declarative routing
+- ✅ **Local Storage**: Hive for offline-first data persistence
+
+### Advanced Features (Implemented)
+- ✅ **Gestures**: Swipe actions, long-press multi-select
+- ✅ **Media**: Image attachments and drawing canvas support
+- ✅ **Security**: App lock with PIN/biometric (local_auth)
+- ✅ **Firebase**: Cloud sync with feature flag support
+- ✅ **Wallpaper System**: Dynamic background loading
+- ✅ **Developer Screen**: Advanced debugging and testing tools
 
 ### Advanced Features (Planned)
-- 🔄 **Gestures**: Swipe actions, long-press multi-select
-- 🔄 **Media**: Image attachments and drawing canvas
-- 🔄 **Sync**: Optional Firebase cloud sync
-- 🔄 **Security**: App lock with PIN/biometric
 - 🔄 **Backup**: Local export/import functionality
+- 🔄 **Collaboration**: Real-time note sharing
 
 ## 📱 Screens
 
 - **Splash Screen**: Animated app introduction
-- **Onboarding**: 3-slide introduction for new users
-- **Home**: Main notes view with search and FAB
-- **Note Editor**: Create/edit text and checklist notes
+- **Onboarding**: 3-slide introduction for new users  
+- **Home**: Main notes view with search, FAB, and wallpaper support
+- **Note Editor**: Rich text editor with formatting toolbar
 - **Labels**: Manage and organize labels
 - **Archived**: View archived notes
 - **Trash**: Manage deleted notes
-- **Settings**: Theme, preferences, and app info
+- **Settings**: Theme, preferences, and app configuration
 - **About**: App version and developer information
+- **Developer**: Debug tools and testing utilities
 
 ## 🏗️ Architecture
 
@@ -61,28 +72,35 @@ lib/
 
 ## 🛠 Tech Stack
 
-- **Framework**: Flutter (latest stable)
-- **Language**: Dart (null safety)
-- **State Management**: Riverpod
-- **Navigation**: GoRouter
-- **Local Storage**: Hive (offline-first)
-- **UI**: Material 3 (Material You)
-- **Architecture**: Clean Architecture
-- **Optional Cloud**: Firebase (feature-flagged)
+- **Framework**: Flutter (>=3.10.0)
+- **Language**: Dart (>=3.10.7, null safety)
+- **State Management**: Riverpod (^2.4.9) with code generation
+- **Navigation**: GoRouter (^12.1.3) for declarative routing
+- **Local Storage**: Hive (^2.2.3) for offline-first persistence
+- **Rich Text**: flutter_quill (^11.5.0) for advanced text editing
+- **UI**: Material 3 with Material You (dynamic_color ^1.6.8)
+- **Architecture**: Clean Architecture with domain/data/presentation layers
+- **Media**: image_picker (^1.0.4) for camera/gallery support
+- **Security**: local_auth (^2.1.6) for PIN/biometric authentication
+- **Firebase**: Cloud sync with feature flags (firebase_core ^2.24.2)
+- **Icons**: FontAwesome (^10.6.0) and Cupertino icons
+- **Animations**: Lottie (^3.3.2) for smooth transitions
+- **Utilities**: intl, uuid, equatable, share_plus, url_launcher
 
 ## 📋 Prerequisites
 
 - Flutter SDK (>=3.10.0)
-- Dart SDK (>=3.10.7)
+- Dart SDK (>=3.10.7) 
 - Android Studio / VS Code with Flutter extensions
-- Android device or emulator
+- Android device or emulator (API 21+)
+- Git for version control
 
 ## 🚀 Getting Started
 
 ### 1. Clone the Repository
 ```bash
 git clone <repository-url>
-cd note
+cd notes
 ```
 
 ### 2. Install Dependencies
@@ -90,12 +108,18 @@ cd note
 flutter pub get
 ```
 
-### 3. Generate Code (Hive adapters)
+### 3. Setup Assets
+Create the required asset directories:
 ```bash
-flutter packages pub run build_runner build
+mkdir -p assets/images assets/icons assets/wallpaper_backgrund
 ```
 
-### 4. Run the App
+### 4. Generate Code (Hive adapters & Riverpod providers)
+```bash
+flutter packages pub run build_runner build --delete-conflicting-outputs
+```
+
+### 5. Run the App
 ```bash
 flutter run
 ```
@@ -182,11 +206,16 @@ Please report bugs through the issue tracker with:
 
 ## 🔄 Version History
 
-- **v1.0.0**: Initial release with core features
-  - Basic note creation/editing
-  - Labels and organization
-  - Theme support
-  - Clean architecture
+- **v1.0.0+1**: Current release with advanced features
+  - Rich text editing with flutter_quill
+  - Dynamic wallpaper system
+  - Material You theming with dynamic colors
+  - Firebase cloud sync (feature-flagged)
+  - Biometric/PIN security
+  - Developer debugging tools
+  - Clean architecture with Riverpod
+  - Advanced gesture controls
+  - Image attachments and drawing support
 
 ## 📞 Support
 

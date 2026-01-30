@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import '../../core/constants/app_constants.dart';
-import '../../core/theme/app_theme.dart';
 import '../providers/settings_providers.dart';
+import '../providers/note_provider.dart';
 import '../utils/wallpaper_loader.dart';
 import '../widgets/wallpaper_picker_sheet.dart';
 
@@ -127,7 +126,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
         Card(
           elevation: 0,
-          color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+          color: Theme.of(
+            context,
+          ).colorScheme.surfaceVariant.withValues(alpha: 0.3),
           margin: EdgeInsets.zero,
           clipBehavior: Clip.antiAlias,
           shape: RoundedRectangleBorder(
@@ -511,20 +512,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     });
   }
 
-  void _clearTrash() {
+  Future<void> _clearTrash() async {
     setState(() {
       _isLoading = true;
     });
 
-    // Simulate clearing trash
-    Future.delayed(const Duration(seconds: 1), () {
+    try {
+      await ref.read(notesListProvider.notifier).emptyTrash();
+      _showMessage('Trash cleared successfully');
+    } catch (e) {
+      _showMessage('Failed to clear trash');
+    } finally {
       if (mounted) {
         setState(() {
           _isLoading = false;
         });
-        _showMessage('Trash cleared successfully');
       }
-    });
+    }
   }
 
   void _resetSettings() {
@@ -657,61 +661,141 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showVibrantThemeDialog() {
-    showDialog(
+    final themes = [
+      'default',
+      'ocean',
+      'forest',
+      'sunset',
+      'purple',
+      'teal',
+      'rose',
+      'amber',
+    ];
+
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Choose Color Theme'),
-        content: SizedBox(
-          width: double.infinity,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children:
-                [
-                  'default',
-                  'ocean',
-                  'forest',
-                  'sunset',
-                  'purple',
-                  'teal',
-                  'rose',
-                  'amber',
-                ].map((theme) {
-                  return RadioListTile<String>(
-                    title: Text(_getVibrantThemeDisplayName(theme)),
-                    subtitle: Container(
-                      height: 20,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 32,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Choose Color Theme',
+              style: Theme.of(
+                context,
+              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Personalize the app with these curated palettes',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: themes.length,
+                separatorBuilder: (context, index) =>
+                    const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final theme = themes[index];
+                  final isSelected = ref.watch(vibrantThemeProvider) == theme;
+                  final previewColors = _getThemePreviewColors(theme);
+
+                  return InkWell(
+                    onTap: () {
+                      ref
+                          .read(vibrantThemeProvider.notifier)
+                          .setVibrantTheme(theme);
+                      Navigator.pop(context);
+                      _showMessage(
+                        'Color theme changed to ${_getVibrantThemeDisplayName(theme)}',
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: _getThemePreviewColors(theme),
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isSelected
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(
+                                  context,
+                                ).colorScheme.outline.withValues(alpha: 0.1),
+                          width: isSelected ? 2 : 1,
                         ),
-                        borderRadius: BorderRadius.circular(10),
+                        color: isSelected
+                            ? Theme.of(context).colorScheme.primaryContainer
+                                  .withValues(alpha: 0.1)
+                            : Colors.transparent,
+                      ),
+                      child: Row(
+                        children: [
+                          // Color preview circles
+                          Row(
+                            children: previewColors
+                                .map(
+                                  (color) => Container(
+                                    width: 24,
+                                    height: 24,
+                                    margin: const EdgeInsets.only(right: 4),
+                                    decoration: BoxDecoration(
+                                      color: color,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: Colors.white24),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Text(
+                              _getVibrantThemeDisplayName(theme),
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                    color: isSelected
+                                        ? Theme.of(context).colorScheme.primary
+                                        : null,
+                                  ),
+                            ),
+                          ),
+                          if (isSelected)
+                            Icon(
+                              Icons.check_circle,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                        ],
                       ),
                     ),
-                    value: theme,
-                    groupValue: ref.read(vibrantThemeProvider),
-                    onChanged: (value) {
-                      if (value != null) {
-                        ref
-                            .read(vibrantThemeProvider.notifier)
-                            .setVibrantTheme(value);
-                        Navigator.of(context).pop();
-                        _showMessage(
-                          'Color theme changed to ${_getVibrantThemeDisplayName(value)}',
-                        );
-                      }
-                    },
                   );
-                }).toList(),
-          ),
+                },
+              ),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-        ],
       ),
     );
   }

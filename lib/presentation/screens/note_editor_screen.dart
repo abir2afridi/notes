@@ -239,23 +239,21 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                         children: [
                           // Space for the transparent appBar
                           const SizedBox(height: kToolbarHeight),
-                          // Premium Title Area with Animation
+                          // Minimalist Title Area with Focus Animation
                           AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            duration: const Duration(milliseconds: 200),
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
-                              color: _isTitleFocused
-                                  ? Theme.of(context).colorScheme.primary
-                                        .withValues(alpha: 0.05)
-                                  : Colors.transparent,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: _isTitleFocused
-                                    ? Theme.of(context).colorScheme.primary
-                                          .withValues(alpha: 0.2)
-                                    : Colors.transparent,
-                                width: 1.5,
+                              border: Border(
+                                bottom: BorderSide(
+                                  color: _isTitleFocused
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Colors.transparent,
+                                  width: 1.5,
+                                ),
                               ),
                             ),
                             child: TextField(
@@ -271,10 +269,7 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                                 ),
                               ),
                               style: Theme.of(context).textTheme.headlineSmall
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: -0.5,
-                                  ),
+                                  ?.copyWith(fontWeight: FontWeight.bold),
                             ),
                           ),
                           Expanded(
@@ -296,59 +291,58 @@ class _NoteEditorScreenState extends ConsumerState<NoteEditorScreen> {
                         ],
                       ),
                     ),
-                    // Transparent Positioned AppBar
+                    // Header extending to status bar
                     Positioned(
                       top: 0,
                       left: 0,
                       right: 0,
-                      child: SafeArea(
-                        child: AppBar(
-                          title: Text(
-                            _isExistingNote ? 'Edit Note' : 'New Note',
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          // Use primary theme if no customization is selected for better visibility
-                          backgroundColor:
-                              (_selectedWallpaper != null ||
-                                  _selectedColor != '#FFFFFF')
-                              ? Colors.transparent
-                              : Theme.of(context).colorScheme.primary,
-                          foregroundColor:
-                              (_selectedWallpaper != null ||
-                                  _selectedColor != '#FFFFFF')
-                              ? Theme.of(context).colorScheme.onSurface
-                              : Theme.of(context).colorScheme.onPrimary,
-                          elevation:
-                              (_selectedWallpaper != null ||
-                                  _selectedColor != '#FFFFFF')
-                              ? 0
-                              : 4,
-                          shadowColor: Theme.of(
-                            context,
-                          ).colorScheme.shadow.withValues(alpha: 0.2),
-                          surfaceTintColor: Colors.transparent,
-                          actions: [
-                            IconButton(
-                              icon: const Icon(Icons.save),
-                              onPressed: _saveNote,
-                            ),
-                            IconButton(
-                              icon: Icon(
-                                _isPinned
-                                    ? Icons.push_pin
-                                    : Icons.push_pin_outlined,
+                      child: Container(
+                        color:
+                            (_selectedWallpaper != null ||
+                                _selectedColor != '#FFFFFF')
+                            ? Colors.transparent
+                            : Theme.of(context).colorScheme.primary,
+                        child: SafeArea(
+                          bottom: false,
+                          child: AppBar(
+                            title: Text(
+                              _isExistingNote ? 'Edit Note' : 'New Note',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
                               ),
-                              onPressed: () {
-                                setState(() {
-                                  _isPinned = !_isPinned;
-                                });
-                              },
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.more_vert),
-                              onPressed: () => _showMoreOptions(context),
-                            ),
-                          ],
+                            backgroundColor: Colors
+                                .transparent, // Always transparent within container
+                            foregroundColor:
+                                (_selectedWallpaper != null ||
+                                    _selectedColor != '#FFFFFF')
+                                ? Theme.of(context).colorScheme.onSurface
+                                : Theme.of(context).colorScheme.onPrimary,
+                            elevation: 0,
+                            surfaceTintColor: Colors.transparent,
+                            actions: [
+                              IconButton(
+                                icon: const Icon(Icons.save),
+                                onPressed: _saveNote,
+                              ),
+                              IconButton(
+                                icon: Icon(
+                                  _isPinned
+                                      ? Icons.push_pin
+                                      : Icons.push_pin_outlined,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _isPinned = !_isPinned;
+                                  });
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.more_vert),
+                                onPressed: () => _showMoreOptions(context),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),

@@ -100,7 +100,7 @@ class _SimpleWorkingEditorState extends State<SimpleWorkingEditor> {
         // Editor Area - Expanded to take space
         Expanded(
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             child: QuillEditor.basic(
               controller: _controller,
               focusNode: _focusNode,
@@ -174,8 +174,156 @@ class _SimpleWorkingEditorState extends State<SimpleWorkingEditor> {
             isActive: _isAttributeApplied(Attribute.ol),
             onPressed: () => _formatSelection(Attribute.ol),
           ),
+          Container(
+            height: 20,
+            width: 1,
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+          ),
+          // NEW: Color Picker Tool
+          _buildColorPickerButton(),
+          // NEW: Text Style Tool
+          _buildStylePickerButton(),
         ],
       ),
+    );
+  }
+
+  Widget _buildColorPickerButton() {
+    final colors = [
+      {'name': 'Black', 'color': Colors.black},
+      {'name': 'Blue', 'color': Colors.blue},
+      {'name': 'Red', 'color': Colors.red},
+      {'name': 'Green', 'color': Colors.green},
+      {'name': 'Orange', 'color': Colors.orange},
+      {'name': 'Purple', 'color': Colors.purple},
+      {'name': 'Deep Purple', 'color': Colors.deepPurple},
+      {'name': 'Amber', 'color': Colors.amber},
+      {'name': 'Teal', 'color': Colors.teal},
+      {'name': 'Grey', 'color': Colors.grey},
+    ];
+
+    return IconButton(
+      icon: const Icon(Icons.format_color_text),
+      tooltip: 'Text Color',
+      onPressed: () {
+        showModalBottomSheet(
+          context: context,
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          builder: (context) => Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 32,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Select Text Color',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 20),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: colors.map((c) {
+                    final color = c['color'] as Color;
+                    return GestureDetector(
+                      onTap: () {
+                        _controller.formatSelection(
+                          ColorAttribute(
+                            '#${color.value.toRadixString(16).substring(2)}',
+                          ),
+                        );
+                        Navigator.pop(context);
+                      },
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.outline.withValues(alpha: 0.2),
+                            width: 1,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: color.withValues(alpha: 0.2),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStylePickerButton() {
+    return IconButton(
+      icon: const Icon(Icons.text_fields),
+      tooltip: 'Text Style',
+      onPressed: () {
+        showModalBottomSheet(
+          context: context,
+          builder: (context) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.format_size),
+                title: const Text('Heading 1'),
+                onTap: () {
+                  _controller.formatSelection(Attribute.h1);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.format_size),
+                title: const Text('Heading 2'),
+                onTap: () {
+                  _controller.formatSelection(Attribute.h2);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.text_format),
+                title: const Text('Body Text'),
+                onTap: () {
+                  _controller.formatSelection(
+                    Attribute.clone(Attribute.h1, null),
+                  );
+                  _controller.formatSelection(
+                    Attribute.clone(Attribute.h2, null),
+                  );
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -207,7 +355,14 @@ class _SimpleWorkingEditorState extends State<SimpleWorkingEditor> {
   }
 
   void _formatSelection(Attribute attribute) {
-    _controller.formatSelection(attribute);
+    final isApplied = _isAttributeApplied(attribute);
+    if (isApplied) {
+      // Toggle off
+      _controller.formatSelection(Attribute.clone(attribute, null));
+    } else {
+      // Toggle on
+      _controller.formatSelection(attribute);
+    }
   }
 
   bool _isAttributeApplied(Attribute attribute) {
