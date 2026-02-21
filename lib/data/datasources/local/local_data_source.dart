@@ -53,14 +53,27 @@ class LocalDataSource {
   }
 
   Future<void> _emergencyRepair() async {
-    // Only wipe as a last resort if box is totally unreadable
+    debugPrint('Executing Hive emergency repair...');
     try {
+      // 1. Close boxes if open
+      try {
+        await Hive.close();
+      } catch (_) {}
+
+      // 2. Delete all boxes from disk
       await Hive.deleteBoxFromDisk(_notesBoxName);
+      await Hive.deleteBoxFromDisk(_labelsBoxName);
+      await Hive.deleteBoxFromDisk(_settingsBoxName);
+
+      // 3. Re-open boxes
       _notesBox = await Hive.openBox<NoteModel>(_notesBoxName);
       _labelsBox = await Hive.openBox<LabelModel>(_labelsBoxName);
       _settingsBox = await Hive.openBox(_settingsBoxName);
+
+      debugPrint('Hive emergency repair completed.');
     } catch (e) {
-      debugPrint('Emergency repair failed: $e');
+      debugPrint('Hive rescue failed: $e');
+      rethrow;
     }
   }
 

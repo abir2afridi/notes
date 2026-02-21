@@ -8,9 +8,41 @@ class AboutScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('About'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 10,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'NOTE CRAFT',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ],
+            ),
+            const Text(
+              'About',
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.5,
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
+        elevation: 0,
+        centerTitle: false,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -30,27 +62,24 @@ class AboutScreen extends StatelessWidget {
                 color: Colors.black87,
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // App Name and Version
             Text(
               AppConstants.appName,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
               'Version ${AppConstants.appVersion}',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 16,
-              ),
+              style: TextStyle(color: Colors.grey[600], fontSize: 16),
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // Description
             Text(
               'A Google Keep-inspired note-taking app built with Flutter. '
@@ -62,9 +91,9 @@ class AboutScreen extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // Features
             const ListTile(
               leading: Icon(Icons.check_circle, color: Colors.green),
@@ -86,16 +115,13 @@ class AboutScreen extends StatelessWidget {
               leading: Icon(Icons.check_circle, color: Colors.green),
               title: Text('Dark mode support'),
             ),
-            
+
             const Spacer(),
-            
+
             // Copyright
             Text(
               '© 2026 NoteKeeper\nBuilt with ❤️ using Flutter',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-              ),
+              style: TextStyle(color: Colors.grey[600], fontSize: 14),
               textAlign: TextAlign.center,
             ),
           ],

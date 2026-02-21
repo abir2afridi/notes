@@ -7,16 +7,16 @@ part 'label_model.g.dart';
 class LabelModel {
   @HiveField(0)
   final String id;
-  
+
   @HiveField(1)
   final String name;
-  
+
   @HiveField(2)
   final String color;
-  
+
   @HiveField(3)
   final DateTime createdAt;
-  
+
   @HiveField(4)
   final DateTime modifiedAt;
 
@@ -63,6 +63,26 @@ class LabelModel {
       color: color ?? this.color,
       createdAt: createdAt ?? this.createdAt,
       modifiedAt: modifiedAt ?? this.modifiedAt,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'color': color,
+      'createdAt': createdAt.toIso8601String(),
+      'modifiedAt': modifiedAt.toIso8601String(),
+    };
+  }
+
+  factory LabelModel.fromJson(Map<String, dynamic> json) {
+    return LabelModel(
+      id: json['id'],
+      name: json['name'],
+      color: json['color'],
+      createdAt: DateTime.parse(json['createdAt']),
+      modifiedAt: DateTime.parse(json['modifiedAt']),
     );
   }
 }

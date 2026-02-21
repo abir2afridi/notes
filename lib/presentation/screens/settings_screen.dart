@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../providers/settings_providers.dart';
 import '../providers/note_provider.dart';
+import '../providers/sync_provider.dart';
+import '../providers/auth_provider.dart';
+import '../../core/constants/app_constants.dart';
 import '../utils/wallpaper_loader.dart';
 import '../widgets/wallpaper_picker_sheet.dart';
 
@@ -40,22 +43,110 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final themeMode = ref.watch(themeModeProvider);
     final vibrantTheme = ref.watch(vibrantThemeProvider);
     final defaultWallpaper = ref.watch(defaultWallpaperProvider);
+    final user = ref.watch(userProvider);
+    final isGuest = ref.watch(isGuestProvider);
 
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          SliverAppBar(
-            title: const Text('Settings'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            foregroundColor: Theme.of(context).colorScheme.onPrimary,
-            floating: true,
-            snap: true,
+          SliverToBoxAdapter(
+            child: _isLoading
+                ? const LinearProgressIndicator(minHeight: 2)
+                : const SizedBox(height: 2),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.only(
+                left: 24,
+                right: 16,
+                top: 70,
+                bottom: 24,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.auto_awesome_rounded,
+                        size: 14,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'NOTE CRAFT',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 2.0,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Preferences',
+                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      color: Theme.of(context).colorScheme.onSurface,
+                      letterSpacing: -1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
+                  _buildSettingsSection(
+                    context,
+                    title: 'Account',
+                    children: [
+                      if (user != null)
+                        ListTile(
+                          leading: CircleAvatar(
+                            backgroundImage: user.photoUrl != null
+                                ? NetworkImage(user.photoUrl!)
+                                : null,
+                            child: user.photoUrl == null
+                                ? const Icon(Icons.person)
+                                : null,
+                          ),
+                          title: Text(user.displayName ?? 'No Name'),
+                          subtitle: Text(user.email ?? 'No Email'),
+                          trailing: TextButton(
+                            onPressed: () {
+                              ref.read(authRepositoryProvider).signOut();
+                              ref
+                                  .read(isGuestProvider.notifier)
+                                  .setGuestMode(false);
+                            },
+                            child: const Text('Sign Out'),
+                          ),
+                        )
+                      else if (isGuest)
+                        ListTile(
+                          leading: const CircleAvatar(
+                            child: Icon(Icons.person_outline),
+                          ),
+                          title: const Text('Guest Mode'),
+                          subtitle: const Text('Sign in to sync your notes'),
+                          trailing: FilledButton.tonal(
+                            onPressed: () {
+                              ref
+                                  .read(isGuestProvider.notifier)
+                                  .setGuestMode(false);
+                            },
+                            child: const Text('Sign In'),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
                   _buildSettingsSection(
                     context,
                     title: 'Appearance',
@@ -71,10 +162,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   _buildSettingsSection(
                     context,
                     title: 'Data Management',
-                    children: [
-                      _buildBackupRestoreTile(),
-                      _buildClearTrashTile(),
-                    ],
+                    children: [_buildCloudSyncTile(), _buildClearTrashTile()],
                   ),
                   const SizedBox(height: 24),
                   _buildSettingsSection(
@@ -109,34 +197,61 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     required List<Widget> children,
     Color? titleColor,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            title,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: titleColor ?? Theme.of(context).colorScheme.primary,
-              letterSpacing: 0.5,
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(left: 8, bottom: 12),
+            child: Text(
+              title.toUpperCase(),
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: titleColor ?? theme.colorScheme.primary,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.2,
+              ),
             ),
           ),
-        ),
-        Card(
-          elevation: 0,
-          color: Theme.of(
-            context,
-          ).colorScheme.surfaceVariant.withValues(alpha: 0.3),
-          margin: EdgeInsets.zero,
-          clipBehavior: Clip.antiAlias,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+          Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.3,
+              ),
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(
+                color: theme.colorScheme.outline.withValues(alpha: 0.1),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
+            ),
+            child: Column(
+              children: children.map((child) {
+                final isLast = children.last == child;
+                if (isLast) return child;
+                return Column(
+                  children: [
+                    child,
+                    Divider(
+                      height: 1,
+                      indent: 64,
+                      endIndent: 20,
+                      color: theme.colorScheme.outline.withValues(alpha: 0.05),
+                    ),
+                  ],
+                );
+              }).toList(),
+            ),
           ),
-          child: Column(children: children),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -196,13 +311,91 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Widget _buildBackupRestoreTile() {
+  Widget _buildCloudSyncTile() {
+    final isSyncEnabled = AppConstants.firebaseSyncEnabled;
     return ListTile(
-      leading: const Icon(Icons.backup),
-      title: const Text('Backup & Restore'),
-      subtitle: const Text('Export/Import notes'),
+      leading: const Icon(Icons.cloud_sync),
+      title: const Text('Cloud Sync'),
+      subtitle: Text(
+        isSyncEnabled
+            ? 'Back up or restore from cloud'
+            : 'Sync is currently disabled',
+      ),
       trailing: const Icon(Icons.arrow_forward_ios),
-      onTap: _showBackupRestoreDialog,
+      onTap: isSyncEnabled ? _showCloudSyncDialog : null,
+      enabled: isSyncEnabled,
+    );
+  }
+
+  void _showCloudSyncDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Consumer(
+        builder: (context, ref, _) {
+          final syncState = ref.watch(syncProvider);
+          final isSyncing = syncState is AsyncLoading;
+
+          return AlertDialog(
+            title: const Text('Cloud Sync'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isSyncing)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: CircularProgressIndicator(),
+                  )
+                else ...[
+                  ListTile(
+                    leading: const Icon(Icons.backup),
+                    title: const Text('Back up to Cloud'),
+                    subtitle: const Text('Upload local data to Firestore'),
+                    onTap: () async {
+                      await ref.read(syncProvider.notifier).backupToCloud();
+                      if (context.mounted) {
+                        final state = ref.read(syncProvider);
+                        if (state.hasError) {
+                          _showMessage(
+                            'Authentication required. Please sign in first.',
+                          );
+                        } else {
+                          Navigator.of(context).pop();
+                          _showMessage('Backup completed successfully');
+                        }
+                      }
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.restore),
+                    title: const Text('Restore from Cloud'),
+                    subtitle: const Text('Download your data from Firestore'),
+                    onTap: () async {
+                      await ref
+                          .read(syncProvider.notifier)
+                          .restoreFromCloud(context);
+                      if (context.mounted) {
+                        final state = ref.read(syncProvider);
+                        if (state.hasError) {
+                          _showMessage('Restoration failed: ${state.error}');
+                        } else {
+                          Navigator.of(context).pop();
+                          _showMessage('Restoration completed successfully');
+                        }
+                      }
+                    },
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: isSyncing ? null : () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -392,44 +585,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  void _showBackupRestoreDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Backup & Restore'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.cloud_upload),
-              title: const Text('Backup Notes'),
-              subtitle: const Text('Export all notes to file'),
-              onTap: () {
-                Navigator.of(context).pop();
-                _backupNotes();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.cloud_download),
-              title: const Text('Restore Notes'),
-              subtitle: const Text('Import notes from file'),
-              onTap: () {
-                Navigator.of(context).pop();
-                _restoreNotes();
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showClearTrashDialog() {
     showDialog(
       context: context,
@@ -478,38 +633,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
       ),
     );
-  }
-
-  void _backupNotes() {
-    setState(() {
-      _isLoading = true;
-    });
-
-    // Simulate backup
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        _showMessage('Notes backed up successfully');
-      }
-    });
-  }
-
-  void _restoreNotes() {
-    setState(() {
-      _isLoading = true;
-    });
-
-    // Simulate restore
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-        _showMessage('Notes restored successfully');
-      }
-    });
   }
 
   Future<void> _clearTrash() async {
@@ -565,6 +688,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   void _showMessage(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
     );
@@ -639,6 +763,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   String _getVibrantThemeDisplayName(String theme) {
     switch (theme) {
+      case 'notekeeper':
+        return 'NoteKeeper (Vibrant)';
       case 'default':
         return 'Default Purple';
       case 'ocean':
@@ -662,6 +788,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   void _showVibrantThemeDialog() {
     final themes = [
+      'notekeeper',
       'default',
       'ocean',
       'forest',

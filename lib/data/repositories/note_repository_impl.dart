@@ -3,10 +3,13 @@ import '../../domain/repositories/note_repository.dart';
 import '../datasources/local/local_data_source.dart';
 import '../models/note_model.dart';
 
+import '../datasources/remote/remote_data_source.dart';
+
 class NoteRepositoryImpl implements NoteRepository {
   final LocalDataSource _localDataSource;
+  final RemoteDataSource _remoteDataSource;
 
-  NoteRepositoryImpl(this._localDataSource);
+  NoteRepositoryImpl(this._localDataSource, this._remoteDataSource);
 
   @override
   Future<List<Note>> getAllNotes() async {
@@ -24,11 +27,13 @@ class NoteRepositoryImpl implements NoteRepository {
   Future<void> saveNote(Note note) async {
     final noteModel = NoteModel.fromEntity(note);
     await _localDataSource.saveNote(noteModel);
+    await _remoteDataSource.saveNote(noteModel);
   }
 
   @override
   Future<void> deleteNote(String id) async {
     await _localDataSource.deleteNote(id);
+    await _remoteDataSource.deleteNote(id);
   }
 
   @override
@@ -135,9 +140,11 @@ class NoteRepositoryImpl implements NoteRepository {
       if (note != null) {
         final trashedNote = note.copyWith(
           isDeleted: true,
+          deletedAt: DateTime.now(),
           modifiedAt: DateTime.now(),
         );
         await saveNote(trashedNote);
+        await _remoteDataSource.moveToTrash([noteId]);
       }
     }
   }
@@ -149,9 +156,11 @@ class NoteRepositoryImpl implements NoteRepository {
       if (note != null) {
         final restoredNote = note.copyWith(
           isDeleted: false,
+          deletedAt: null,
           modifiedAt: DateTime.now(),
         );
         await saveNote(restoredNote);
+        await _remoteDataSource.restoreNotes([noteId]);
       }
     }
   }
@@ -160,12 +169,14 @@ class NoteRepositoryImpl implements NoteRepository {
   Future<void> permanentlyDeleteNotes(List<String> noteIds) async {
     for (final noteId in noteIds) {
       await deleteNote(noteId);
+      await _remoteDataSource.permanentlyDeleteNotes([noteId]);
     }
   }
 
   @override
   Future<void> emptyTrash() async {
     await _localDataSource.emptyTrash();
+    await _remoteDataSource.emptyTrash();
   }
 
   @override
@@ -220,6 +231,20 @@ class NoteRepositoryImpl implements NoteRepository {
         );
         await saveNote(updated);
       }
+    }
+  }
+
+  @override
+  Future<void> syncNoteToRemote(Note note) async {
+    final noteModel = NoteModel.fromEntity(note);
+    await _remoteDataSource.saveNote(noteModel);
+  }
+
+  @override
+  Future<void> syncNotesToRemote(List<Note> notes) async {
+    for (final note in notes) {
+      final noteModel = NoteModel.fromEntity(note);
+      await _remoteDataSource.saveNote(noteModel);
     }
   }
 }

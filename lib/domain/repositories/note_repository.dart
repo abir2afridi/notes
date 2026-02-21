@@ -32,4 +32,8 @@ abstract class NoteRepository {
 
   Future<void> updateNoteWallpaper(String noteId, String? wallpaperPath);
   Future<void> clearWallpaperForAllNotes();
+
+  // Remote Sync Operations
+  Future<void> syncNoteToRemote(Note note);
+  Future<void> syncNotesToRemote(List<Note> notes);
 }

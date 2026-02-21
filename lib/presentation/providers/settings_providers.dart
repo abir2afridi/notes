@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
+import 'settings_repository_provider.dart';
 
 // Theme mode provider with persistence
 final themeModeProvider =
     StateNotifierProvider<ThemeModeNotifier, AppThemeMode>((ref) {
-      return ThemeModeNotifier();
+      return ThemeModeNotifier(ref);
     });
 
 enum AppThemeMode { light, dark, system }
@@ -26,20 +26,20 @@ extension AppThemeModeExtension on AppThemeMode {
 }
 
 class ThemeModeNotifier extends StateNotifier<AppThemeMode> {
-  ThemeModeNotifier() : super(AppThemeMode.system) {
+  final Ref _ref;
+  ThemeModeNotifier(this._ref) : super(AppThemeMode.system) {
     _loadThemeMode();
   }
 
   Future<void> _loadThemeMode() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedTheme = prefs.getString('theme_mode');
-      if (savedTheme != null) {
-        state = AppThemeMode.values.firstWhere(
-          (mode) => mode.toString() == savedTheme,
-          orElse: () => AppThemeMode.system,
-        );
-      }
+      final settings = await _ref
+          .read(settingsRepositoryProvider)
+          .getSettings();
+      state = AppThemeMode.values.firstWhere(
+        (mode) => mode.toString() == settings.themeMode,
+        orElse: () => AppThemeMode.system,
+      );
     } catch (e) {
       // Keep default if loading fails
     }
@@ -48,8 +48,9 @@ class ThemeModeNotifier extends StateNotifier<AppThemeMode> {
   Future<void> setThemeMode(AppThemeMode mode) async {
     state = mode;
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('theme_mode', mode.toString());
+      final repo = _ref.read(settingsRepositoryProvider);
+      final current = await repo.getSettings();
+      await repo.saveSettings(current.copyWith(themeMode: mode.toString()));
     } catch (e) {
       // Continue even if saving fails
     }
@@ -59,21 +60,21 @@ class ThemeModeNotifier extends StateNotifier<AppThemeMode> {
 // Default wallpaper provider
 final defaultWallpaperProvider =
     StateNotifierProvider<DefaultWallpaperNotifier, String?>((ref) {
-      return DefaultWallpaperNotifier();
+      return DefaultWallpaperNotifier(ref);
     });
 
 class DefaultWallpaperNotifier extends StateNotifier<String?> {
-  DefaultWallpaperNotifier() : super(null) {
+  final Ref _ref;
+  DefaultWallpaperNotifier(this._ref) : super(null) {
     _loadDefaultWallpaper();
   }
 
-  static const _wallpaperKey = 'default_wallpaper_path';
-
   Future<void> _loadDefaultWallpaper() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedPath = prefs.getString(_wallpaperKey);
-      state = savedPath;
+      final settings = await _ref
+          .read(settingsRepositoryProvider)
+          .getSettings();
+      state = settings.defaultWallpaperPath;
     } catch (e) {
       // Ignore load errors
     }
@@ -82,12 +83,9 @@ class DefaultWallpaperNotifier extends StateNotifier<String?> {
   Future<void> setDefaultWallpaper(String? path) async {
     state = path;
     try {
-      final prefs = await SharedPreferences.getInstance();
-      if (path == null || path.isEmpty) {
-        await prefs.remove(_wallpaperKey);
-      } else {
-        await prefs.setString(_wallpaperKey, path);
-      }
+      final repo = _ref.read(settingsRepositoryProvider);
+      final current = await repo.getSettings();
+      await repo.saveSettings(current.copyWith(defaultWallpaperPath: path));
     } catch (e) {
       // Ignore save errors
     }
@@ -97,23 +95,21 @@ class DefaultWallpaperNotifier extends StateNotifier<String?> {
 // Default note color provider
 final defaultNoteColorProvider =
     StateNotifierProvider<DefaultNoteColorNotifier, String>((ref) {
-      return DefaultNoteColorNotifier();
+      return DefaultNoteColorNotifier(ref);
     });
 
 class DefaultNoteColorNotifier extends StateNotifier<String> {
-  DefaultNoteColorNotifier() : super(AppConstants.noteColors.first) {
+  final Ref _ref;
+  DefaultNoteColorNotifier(this._ref) : super(AppConstants.noteColors.first) {
     _loadDefaultColor();
   }
 
   Future<void> _loadDefaultColor() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedColor =
-          prefs.getString('default_note_color') ??
-          AppConstants.noteColors.first;
-      if (AppConstants.noteColors.contains(savedColor)) {
-        state = savedColor;
-      }
+      final settings = await _ref
+          .read(settingsRepositoryProvider)
+          .getSettings();
+      state = settings.defaultNoteColor;
     } catch (e) {
       // Keep default if loading fails
     }
@@ -122,8 +118,9 @@ class DefaultNoteColorNotifier extends StateNotifier<String> {
   Future<void> setDefaultColor(String color) async {
     state = color;
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('default_note_color', color);
+      final repo = _ref.read(settingsRepositoryProvider);
+      final current = await repo.getSettings();
+      await repo.saveSettings(current.copyWith(defaultNoteColor: color));
     } catch (e) {
       // Continue even if saving fails
     }
@@ -133,19 +130,21 @@ class DefaultNoteColorNotifier extends StateNotifier<String> {
 // Vibrant theme provider
 final vibrantThemeProvider =
     StateNotifierProvider<VibrantThemeNotifier, String>((ref) {
-      return VibrantThemeNotifier();
+      return VibrantThemeNotifier(ref);
     });
 
 class VibrantThemeNotifier extends StateNotifier<String> {
-  VibrantThemeNotifier() : super('default') {
+  final Ref _ref;
+  VibrantThemeNotifier(this._ref) : super('notekeeper') {
     _loadVibrantTheme();
   }
 
   Future<void> _loadVibrantTheme() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedTheme = prefs.getString('vibrant_theme') ?? 'default';
-      state = savedTheme;
+      final settings = await _ref
+          .read(settingsRepositoryProvider)
+          .getSettings();
+      state = settings.vibrantTheme;
     } catch (e) {
       // Keep default if loading fails
     }
@@ -154,8 +153,9 @@ class VibrantThemeNotifier extends StateNotifier<String> {
   Future<void> setVibrantTheme(String themeName) async {
     state = themeName;
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('vibrant_theme', themeName);
+      final repo = _ref.read(settingsRepositoryProvider);
+      final current = await repo.getSettings();
+      await repo.saveSettings(current.copyWith(vibrantTheme: themeName));
     } catch (e) {
       // Continue even if saving fails
     }
@@ -164,19 +164,21 @@ class VibrantThemeNotifier extends StateNotifier<String> {
 
 // Font size provider
 final fontSizeProvider = StateNotifierProvider<FontSizeNotifier, double>((ref) {
-  return FontSizeNotifier();
+  return FontSizeNotifier(ref);
 });
 
 class FontSizeNotifier extends StateNotifier<double> {
-  FontSizeNotifier() : super(16.0) {
+  final Ref _ref;
+  FontSizeNotifier(this._ref) : super(16.0) {
     _loadFontSize();
   }
 
   Future<void> _loadFontSize() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedSize = prefs.getDouble('font_size') ?? 16.0;
-      state = savedSize;
+      final settings = await _ref
+          .read(settingsRepositoryProvider)
+          .getSettings();
+      state = settings.fontSize;
     } catch (e) {
       // Keep default if loading fails
     }
@@ -185,8 +187,9 @@ class FontSizeNotifier extends StateNotifier<double> {
   Future<void> setFontSize(double size) async {
     state = size;
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setDouble('font_size', size);
+      final repo = _ref.read(settingsRepositoryProvider);
+      final current = await repo.getSettings();
+      await repo.saveSettings(current.copyWith(fontSize: size));
     } catch (e) {
       // Continue even if saving fails
     }
@@ -197,19 +200,21 @@ class FontSizeNotifier extends StateNotifier<double> {
 final defaultViewProvider = StateNotifierProvider<DefaultViewNotifier, String>((
   ref,
 ) {
-  return DefaultViewNotifier();
+  return DefaultViewNotifier(ref);
 });
 
 class DefaultViewNotifier extends StateNotifier<String> {
-  DefaultViewNotifier() : super('grid') {
+  final Ref _ref;
+  DefaultViewNotifier(this._ref) : super('grid') {
     _loadDefaultView();
   }
 
   Future<void> _loadDefaultView() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedView = prefs.getString('default_view') ?? 'grid';
-      state = savedView;
+      final settings = await _ref
+          .read(settingsRepositoryProvider)
+          .getSettings();
+      state = settings.defaultView;
     } catch (e) {
       // Keep default if loading fails
     }
@@ -218,8 +223,43 @@ class DefaultViewNotifier extends StateNotifier<String> {
   Future<void> setDefaultView(String view) async {
     state = view;
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('default_view', view);
+      final repo = _ref.read(settingsRepositoryProvider);
+      final current = await repo.getSettings();
+      await repo.saveSettings(current.copyWith(defaultView: view));
+    } catch (e) {
+      // Continue even if saving fails
+    }
+  }
+}
+
+// Guest mode provider
+final isGuestProvider = StateNotifierProvider<IsGuestNotifier, bool>((ref) {
+  return IsGuestNotifier(ref);
+});
+
+class IsGuestNotifier extends StateNotifier<bool> {
+  final Ref _ref;
+  IsGuestNotifier(this._ref) : super(false) {
+    _loadIsGuest();
+  }
+
+  Future<void> _loadIsGuest() async {
+    try {
+      final settings = await _ref
+          .read(settingsRepositoryProvider)
+          .getSettings();
+      state = settings.isGuest;
+    } catch (e) {
+      // Keep default if loading fails
+    }
+  }
+
+  Future<void> setGuestMode(bool isGuest) async {
+    state = isGuest;
+    try {
+      final repo = _ref.read(settingsRepositoryProvider);
+      final current = await repo.getSettings();
+      await repo.saveSettings(current.copyWith(isGuest: isGuest));
     } catch (e) {
       // Continue even if saving fails
     }

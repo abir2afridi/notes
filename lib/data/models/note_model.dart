@@ -63,6 +63,9 @@ class NoteModel {
   @HiveField(18)
   final double toolbarOpacity;
 
+  @HiveField(19)
+  final DateTime? deletedAt;
+
   const NoteModel({
     required this.id,
     required this.title,
@@ -83,6 +86,7 @@ class NoteModel {
     this.richContent,
     this.bgOpacity = 0.15,
     this.toolbarOpacity = 0.15,
+    this.deletedAt,
   });
 
   // Convert from Domain Entity
@@ -108,6 +112,7 @@ class NoteModel {
       metadata: note.metadata,
       bgOpacity: note.bgOpacity,
       toolbarOpacity: note.toolbarOpacity,
+      deletedAt: note.deletedAt,
     );
   }
 
@@ -132,6 +137,7 @@ class NoteModel {
       metadata: metadata,
       bgOpacity: bgOpacity,
       toolbarOpacity: toolbarOpacity,
+      deletedAt: deletedAt,
     );
   }
 
@@ -154,6 +160,7 @@ class NoteModel {
     String? metadata,
     double? bgOpacity,
     double? toolbarOpacity,
+    DateTime? deletedAt,
   }) {
     return NoteModel(
       id: id ?? this.id,
@@ -174,6 +181,60 @@ class NoteModel {
       metadata: metadata ?? this.metadata,
       bgOpacity: bgOpacity ?? this.bgOpacity,
       toolbarOpacity: toolbarOpacity ?? this.toolbarOpacity,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'title': title,
+      'content': content,
+      'type': type,
+      'createdAt': createdAt.toIso8601String(),
+      'modifiedAt': modifiedAt.toIso8601String(),
+      'reminderAt': reminderAt?.toIso8601String(),
+      'backgroundColor': backgroundColor,
+      'isPinned': isPinned,
+      'isArchived': isArchived,
+      'isDeleted': isDeleted,
+      'labelIds': labelIds,
+      'attachments': attachments,
+      'checklistItems': checklistItems.map((item) => item.toJson()).toList(),
+      'backgroundImagePath': backgroundImagePath,
+      'metadata': metadata,
+      'bgOpacity': bgOpacity,
+      'toolbarOpacity': toolbarOpacity,
+      'deletedAt': deletedAt?.toIso8601String(),
+    };
+  }
+
+  factory NoteModel.fromJson(Map<String, dynamic> json) {
+    return NoteModel(
+      id: json['id'],
+      title: json['title'],
+      content: json['content'],
+      type: json['type'],
+      createdAt: DateTime.parse(json['createdAt']),
+      modifiedAt: DateTime.parse(json['modifiedAt']),
+      reminderAt: json['reminderAt'] != null
+          ? DateTime.parse(json['reminderAt'])
+          : null,
+      backgroundColor: json['backgroundColor'] ?? '#FFFFFF',
+      isPinned: json['isPinned'] ?? false,
+      isArchived: json['isArchived'] ?? false,
+      isDeleted: json['isDeleted'] ?? false,
+      labelIds: List<String>.from(json['labelIds'] ?? []),
+      attachments: List<String>.from(json['attachments'] ?? []),
+      checklistItems: (json['checklistItems'] as List? ?? [])
+          .map((item) => ChecklistItemModel.fromJson(item))
+          .toList(),
+      backgroundImagePath: json['backgroundImagePath'],
+      metadata: json['metadata'],
+      bgOpacity: (json['bgOpacity'] ?? 0.15).toDouble(),
+      toolbarOpacity: (json['toolbarOpacity'] ?? 0.15).toDouble(),
+      deletedAt: json['deletedAt'] != null
+          ? DateTime.parse(json['deletedAt'])
+          : null,
     );
   }
 }
@@ -214,6 +275,18 @@ class ChecklistItemModel {
       id: id ?? this.id,
       text: text ?? this.text,
       isChecked: isChecked ?? this.isChecked,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'id': id, 'text': text, 'isChecked': isChecked};
+  }
+
+  factory ChecklistItemModel.fromJson(Map<String, dynamic> json) {
+    return ChecklistItemModel(
+      id: json['id'],
+      text: json['text'],
+      isChecked: json['isChecked'] ?? false,
     );
   }
 }

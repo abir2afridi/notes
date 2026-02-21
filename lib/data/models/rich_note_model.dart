@@ -1,12 +1,21 @@
 import 'package:equatable/equatable.dart';
 import 'dart:convert';
+import 'package:hive/hive.dart';
+
+part 'rich_note_model.g.dart';
 
 /// Rich text content model for storing formatted notes
+@HiveType(typeId: 3)
 class RichNoteContent extends Equatable {
+  @HiveField(0)
   final String deltaJson;
+  @HiveField(1)
   final String plainText;
+  @HiveField(2)
   final int length;
+  @HiveField(3)
   final DateTime lastModified;
+  @HiveField(4)
   final Map<String, dynamic> metadata;
 
   const RichNoteContent({

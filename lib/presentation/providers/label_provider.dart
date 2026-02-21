@@ -6,9 +6,12 @@ import '../../domain/entities/label.dart';
 import '../../domain/repositories/label_repository.dart';
 import 'note_provider.dart';
 
+import 'remote_provider.dart';
+
 final labelRepositoryProvider = Provider<LabelRepository>((ref) {
   final dataSource = ref.watch(localDataSourceProvider);
-  return LabelRepositoryImpl(dataSource);
+  final remoteDataSource = ref.watch(remoteDataSourceProvider);
+  return LabelRepositoryImpl(dataSource, remoteDataSource);
 });
 
 final labelsProvider = StateNotifierProvider<LabelsNotifier, List<Label>>((

@@ -36,13 +36,14 @@ class NoteModelAdapter extends TypeAdapter<NoteModel> {
       richContent: fields[16] as RichNoteContent?,
       bgOpacity: fields[17] as double,
       toolbarOpacity: fields[18] as double,
+      deletedAt: fields[19] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, NoteModel obj) {
     writer
-      ..writeByte(19)
+      ..writeByte(20)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -80,7 +81,9 @@ class NoteModelAdapter extends TypeAdapter<NoteModel> {
       ..writeByte(17)
       ..write(obj.bgOpacity)
       ..writeByte(18)
-      ..write(obj.toolbarOpacity);
+      ..write(obj.toolbarOpacity)
+      ..writeByte(19)
+      ..write(obj.deletedAt);
   }
 
   @override

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'dart:convert';
+import 'dart:ui';
 import '../../data/models/rich_note_model.dart';
 
 /// Frameless Rich Text Editor with integrated toolbar
@@ -23,10 +24,10 @@ class SimpleWorkingEditor extends StatefulWidget {
   });
 
   @override
-  State<SimpleWorkingEditor> createState() => _SimpleWorkingEditorState();
+  State<SimpleWorkingEditor> createState() => SimpleWorkingEditorState();
 }
 
-class _SimpleWorkingEditorState extends State<SimpleWorkingEditor> {
+class SimpleWorkingEditorState extends State<SimpleWorkingEditor> {
   late QuillController _controller;
   late FocusNode _focusNode;
 
@@ -95,39 +96,53 @@ class _SimpleWorkingEditorState extends State<SimpleWorkingEditor> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Editor Area - Expanded to take space
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: QuillEditor.basic(
-              controller: _controller,
-              focusNode: _focusNode,
-            ),
-          ),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(
+        20,
+        0,
+        20,
+        80,
+      ), // More bottom padding for floating tools
+      child: QuillEditor.basic(
+        controller: _controller,
+        focusNode: _focusNode,
+        config: QuillEditorConfig(
+          placeholder: widget.placeholder ?? 'Start typing...',
+          autoFocus: widget.autoFocus,
+          padding: EdgeInsets.zero,
         ),
+      ),
+    );
+  }
 
-        // Dynamic bottom toolbar that feels part of the screen
-        Container(
-          margin: const EdgeInsets.all(12),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          decoration: BoxDecoration(
-            color: Theme.of(
-              context,
-            ).colorScheme.surface.withValues(alpha: widget.toolbarOpacity),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: Theme.of(
-                context,
-              ).colorScheme.outline.withValues(alpha: 0.1),
-            ),
+  // Making this public so NoteEditorScreen can use it in its Stack
+  Widget buildToolbar(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Theme.of(
+          context,
+        ).colorScheme.surface.withValues(alpha: widget.toolbarOpacity),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
           child: _buildFormattingToolbar(),
         ),
-        // Add space for the keyboard
-        SizedBox(height: MediaQuery.of(context).viewInsets.bottom > 0 ? 0 : 8),
-      ],
+      ),
     );
   }
 
@@ -244,7 +259,7 @@ class _SimpleWorkingEditorState extends State<SimpleWorkingEditor> {
                       onTap: () {
                         _controller.formatSelection(
                           ColorAttribute(
-                            '#${color.value.toRadixString(16).substring(2)}',
+                            '#${color.toARGB32().toRadixString(16).substring(2)}',
                           ),
                         );
                         Navigator.pop(context);

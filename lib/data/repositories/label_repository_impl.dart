@@ -3,10 +3,13 @@ import '../../domain/repositories/label_repository.dart';
 import '../datasources/local/local_data_source.dart';
 import '../models/label_model.dart';
 
+import '../datasources/remote/remote_data_source.dart';
+
 class LabelRepositoryImpl implements LabelRepository {
   final LocalDataSource _localDataSource;
+  final RemoteDataSource _remoteDataSource;
 
-  LabelRepositoryImpl(this._localDataSource);
+  LabelRepositoryImpl(this._localDataSource, this._remoteDataSource);
 
   @override
   Future<List<Label>> getAllLabels() async {
@@ -35,15 +38,18 @@ class LabelRepositoryImpl implements LabelRepository {
   Future<void> saveLabel(Label label) async {
     final model = LabelModel.fromEntity(label);
     await _localDataSource.saveLabel(model);
+    await _remoteDataSource.saveLabel(model);
   }
 
   @override
-  Future<void> deleteLabel(String id) {
-    return _localDataSource.deleteLabel(id);
+  Future<void> deleteLabel(String id) async {
+    await _localDataSource.deleteLabel(id);
+    await _remoteDataSource.deleteLabel(id);
   }
 
   @override
-  Future<void> deleteAllLabels() {
-    return _localDataSource.deleteAllLabels();
+  Future<void> deleteAllLabels() async {
+    // Note: Remote bulk delete not implemented here for safety
+    await _localDataSource.deleteAllLabels();
   }
 }

@@ -1,105 +1,97 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'core/theme/app_theme.dart';
-import 'core/theme/vibrant_theme.dart';
-import 'presentation/providers/settings_providers.dart';
-import 'presentation/providers/note_provider.dart';
+
 import 'presentation/routes/app_router.dart';
-import 'data/datasources/local/local_data_source.dart';
+import 'core/theme/app_theme.dart';
 import 'data/models/note_model.dart';
 import 'data/models/label_model.dart';
-import 'core/constants/app_constants.dart';
+import 'presentation/providers/settings_providers.dart';
+import 'data/datasources/local/local_data_source.dart';
+import 'presentation/providers/note_provider.dart';
+import 'firebase_options.dart';
 
-Future<void> main() async {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Core Bootstrapping with Timeout & Error Boundary
-  LocalDataSource? localDataSource;
+  // Initialize Firebase
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  try {
-    // Run initialization tasks in parallel where possible, with a global timeout
-    await Future.wait([
-      // A: Hive Initialization (Critical)
-      Hive.initFlutter(),
+  // Initialize Hive
+  await Hive.initFlutter();
 
-      // B: Firebase Initialization (Non-blocking fail-safe)
-      if (AppConstants.firebaseSyncEnabled)
-        Firebase.initializeApp().catchError((e) {
-          debugPrint('Firebase init failed: $e');
-          return Firebase.app();
-        }),
-    ]).timeout(
-      const Duration(seconds: 5),
-      onTimeout: () {
-        debugPrint('Bootstrap components timed out after 5s');
-        return [];
-      },
-    );
+  // Register Hive adapters
+  Hive.registerAdapter(NoteModelAdapter());
+  Hive.registerAdapter(LabelModelAdapter());
 
-    // 2. Resilient Adapter Registration
-    _registerAdapters();
+  // Open Hive boxes
+  await Hive.openBox<NoteModel>('notes');
+  await Hive.openBox<LabelModel>('labels');
+  await Hive.openBox('settings');
 
-    // 3. Initialize Data Source with Internal Migration Logic
-    localDataSource = LocalDataSource();
-    await localDataSource.init().timeout(const Duration(seconds: 4));
-  } catch (e, stack) {
-    debugPrint('BOOTSTRAP CRITICAL ERROR: $e');
-    debugPrint('STACKTRACE: $stack');
+  // Initialize LocalDataSource
+  final localDataSource = LocalDataSource();
+  await localDataSource.init();
 
-    // EMERGENCY RESCUE: If the above failed (likely DB corruption),
-    // attempt to provide a clean state or at least let the app run.
-    try {
-      localDataSource = LocalDataSource();
-      await localDataSource.init();
-    } catch (_) {
-      // If even this fails, we let the app run; the UI will show errors
-      // instead of freezing on splash.
-    }
-  }
+  // Set preferred orientations
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
+  // Set system UI overlay style
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
+  );
 
   runApp(
     ProviderScope(
       overrides: [
-        if (localDataSource != null)
-          localDataSourceProvider.overrideWithValue(localDataSource),
+        // Override the LocalDataSource provider with initialized instance
+        localDataSourceProvider.overrideWithValue(localDataSource),
       ],
-      child: const NoteKeeperApp(),
+      child: const NoteCraftApp(),
     ),
   );
 }
 
-void _registerAdapters() {
-  try {
-    if (!Hive.isAdapterRegistered(0)) {
-      Hive.registerAdapter(NoteModelAdapter());
-    }
-    if (!Hive.isAdapterRegistered(1)) {
-      Hive.registerAdapter(ChecklistItemModelAdapter());
-    }
-    if (!Hive.isAdapterRegistered(2)) {
-      Hive.registerAdapter(LabelModelAdapter());
-    }
-  } catch (e) {
-    debugPrint('Adapter registration warning: $e');
-  }
-}
-
-class NoteKeeperApp extends ConsumerWidget {
-  const NoteKeeperApp({super.key});
+class NoteCraftApp extends ConsumerWidget {
+  const NoteCraftApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final appRouter = ref.watch(appRouterProvider);
     final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
-      title: AppConstants.appName,
-      themeMode: themeMode.toThemeMode(),
-      theme: ref.watch(appThemeProvider),
-      darkTheme: ref.watch(appThemeProvider),
-      routerConfig: AppRouter.router,
+      title: 'Note Craft',
       debugShowCheckedModeBanner: false,
+
+      // Theme configuration
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode.toThemeMode(),
+
+      // Router configuration
+      routerConfig: appRouter,
+
+      // Builder for custom transitions and overlays
+      builder: (context, child) {
+        return MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            textScaler: TextScaler.linear(1.0), // Prevent text scaling
+          ),
+          child: child!,
+        );
+      },
     );
   }
 }

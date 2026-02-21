@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../domain/entities/note.dart';
-import '../../domain/entities/label.dart';
 import '../providers/note_provider.dart';
 import '../providers/label_provider.dart';
 import '../providers/settings_providers.dart';
@@ -14,6 +14,7 @@ class ArchivedScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
     final archivedNotes = ref.watch(archivedNotesProvider);
     final labels = ref.watch(labelsProvider);
     final defaultWallpaper = ref.watch(defaultWallpaperProvider);
@@ -21,45 +22,143 @@ class ArchivedScreen extends ConsumerWidget {
     final labelLookup = {for (final label in labels) label.id: label};
 
     return Scaffold(
+      backgroundColor: theme.colorScheme.surface,
       body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
         slivers: [
-          SliverAppBar(
-            title: const Text('Archived'),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            foregroundColor: Theme.of(context).colorScheme.onPrimary,
-            floating: true,
-            snap: true,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.search),
-                onPressed: () {
-                  // Search functionality
-                },
+          SliverToBoxAdapter(
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+                child: Row(
+                  children: [
+                    _HeaderIconButton(
+                      icon: Icons.arrow_back_ios_new_rounded,
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        if (context.canPop()) {
+                          context.pop();
+                        } else {
+                          context.go('/home');
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.auto_awesome_rounded,
+                                size: 12,
+                                color: theme.colorScheme.primary,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'NOTE CRAFT',
+                                style: theme.textTheme.labelMedium?.copyWith(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.5,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            'Archive',
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w900,
+                              color: theme.colorScheme.onSurface,
+                              letterSpacing: -1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        isGridView
+                            ? Icons.grid_view_rounded
+                            : Icons.view_list_rounded,
+                      ),
+                      onPressed: () {
+                        HapticFeedback.selectionClick();
+                        final nextIsGrid = !isGridView;
+                        ref
+                            .read(defaultViewProvider.notifier)
+                            .setDefaultView(nextIsGrid ? 'grid' : 'list');
+                      },
+                      style: IconButton.styleFrom(
+                        backgroundColor: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.05,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ],
+            ),
           ),
           if (archivedNotes.isEmpty)
-            SliverFillRemaining(
+            const SliverFillRemaining(
               hasScrollBody: false,
-              child: _ArchivedEmptyState(
-                onReturn: () => _navigateHome(context),
-              ),
+              child: _ArchivedEmptyState(),
             )
           else
             SliverPadding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
               sliver: isGridView
-                  ? _ArchivedGrid(
-                      notes: archivedNotes,
-                      labelLookup: labelLookup,
-                      defaultWallpaper: defaultWallpaper,
-                      ref: ref,
+                  ? SliverGrid(
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                            childAspectRatio: 0.72,
+                          ),
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        return NoteCard(
+                          note: archivedNotes[index],
+                          labelLookup: labelLookup,
+                          defaultWallpaper: defaultWallpaper,
+                          onTap: () =>
+                              _openNote(context, archivedNotes[index].id),
+                          onLongPress: () {
+                            HapticFeedback.mediumImpact();
+                            _showArchivedActions(
+                              context,
+                              ref,
+                              archivedNotes[index],
+                            );
+                          },
+                        );
+                      }, childCount: archivedNotes.length),
                     )
-                  : _ArchivedList(
-                      notes: archivedNotes,
-                      labelLookup: labelLookup,
-                      defaultWallpaper: defaultWallpaper,
-                      ref: ref,
+                  : SliverList(
+                      delegate: SliverChildBuilderDelegate((context, index) {
+                        final note = archivedNotes[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: NoteCard(
+                            note: note,
+                            labelLookup: labelLookup,
+                            defaultWallpaper: defaultWallpaper,
+                            onTap: () => _openNote(context, note.id),
+                            onLongPress: () {
+                              HapticFeedback.mediumImpact();
+                              _showArchivedActions(context, ref, note);
+                            },
+                          ),
+                        );
+                      }, childCount: archivedNotes.length),
                     ),
             ),
         ],
@@ -67,116 +166,113 @@ class ArchivedScreen extends ConsumerWidget {
     );
   }
 
-  void _navigateHome(BuildContext context) {
-    if (context.canPop()) {
-      context.pop();
-    } else {
-      context.go('/home');
-    }
+  void _openNote(BuildContext context, String noteId) {
+    context.push('/note/$noteId');
   }
-}
 
-class _ArchivedGrid extends StatelessWidget {
-  final List<Note> notes;
-  final Map<String, Label> labelLookup;
-  final String? defaultWallpaper;
-  final WidgetRef ref;
-
-  const _ArchivedGrid({
-    required this.notes,
-    required this.labelLookup,
-    required this.defaultWallpaper,
-    required this.ref,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SliverGrid(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        childAspectRatio: 0.72,
-      ),
-      delegate: SliverChildBuilderDelegate((context, index) {
-        return NoteCard(
-          note: notes[index],
-          labelLookup: labelLookup,
-          defaultWallpaper: defaultWallpaper,
-          onTap: () => _openNote(context, notes[index].id),
-          onLongPress: () => _showArchivedActions(context, ref, notes[index]),
-        );
-      }, childCount: notes.length),
-    );
-  }
-}
-
-class _ArchivedList extends StatelessWidget {
-  final List<Note> notes;
-  final Map<String, Label> labelLookup;
-  final String? defaultWallpaper;
-  final WidgetRef ref;
-
-  const _ArchivedList({
-    required this.notes,
-    required this.labelLookup,
-    required this.defaultWallpaper,
-    required this.ref,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SliverList(
-      delegate: SliverChildBuilderDelegate((context, index) {
-        final note = notes[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: NoteCard(
-            note: note,
-            labelLookup: labelLookup,
-            defaultWallpaper: defaultWallpaper,
-            onTap: () => _openNote(context, note.id),
-            onLongPress: () => _showArchivedActions(context, ref, note),
+  void _showArchivedActions(BuildContext context, WidgetRef ref, Note note) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        final theme = Theme.of(context);
+        return Container(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.2,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(Icons.unarchive_rounded),
+                  title: const Text('Restore to Library'),
+                  onTap: () async {
+                    Navigator.of(sheetContext).pop();
+                    await ref
+                        .read(notesListProvider.notifier)
+                        .unarchiveNote(note.id);
+                  },
+                ),
+                ListTile(
+                  leading: Icon(
+                    Icons.delete_outline_rounded,
+                    color: theme.colorScheme.error,
+                  ),
+                  title: Text(
+                    'Move to Trash',
+                    style: TextStyle(color: theme.colorScheme.error),
+                  ),
+                  onTap: () async {
+                    Navigator.of(sheetContext).pop();
+                    await ref
+                        .read(notesListProvider.notifier)
+                        .moveToTrash(note.id);
+                  },
+                ),
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
         );
-      }, childCount: notes.length),
+      },
     );
   }
 }
 
 class _ArchivedEmptyState extends StatelessWidget {
-  final VoidCallback onReturn;
-
-  const _ArchivedEmptyState({required this.onReturn});
+  const _ArchivedEmptyState();
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32),
+        padding: const EdgeInsets.all(48.0),
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.archive_outlined, size: 96, color: Colors.grey[400]),
-            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(40),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.05),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.archive_outlined,
+                size: 80,
+                color: theme.colorScheme.primary.withValues(alpha: 0.2),
+              ),
+            ),
+            const SizedBox(height: 40),
             Text(
-              'Nothing archived yet',
-              style: Theme.of(context).textTheme.headlineSmall,
-              textAlign: TextAlign.center,
+              'Archive is Empty',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.5,
+              ),
             ),
             const SizedBox(height: 12),
             Text(
-              'Pin or archive notes to keep them handy without clutter. Archived notes stay searchable.',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+              "Keep your main workspace clean by archiving notes you don't need right now.",
               textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: onReturn,
-              icon: const Icon(Icons.home_outlined),
-              label: const Text('Back to notes'),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                height: 1.5,
+              ),
             ),
           ],
         ),
@@ -185,61 +281,23 @@ class _ArchivedEmptyState extends StatelessWidget {
   }
 }
 
-void _openNote(BuildContext context, String noteId) {
-  context.push('/note/$noteId');
-}
+class _HeaderIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
 
-void _showArchivedActions(BuildContext context, WidgetRef ref, Note note) {
-  showModalBottomSheet(
-    context: context,
-    useSafeArea: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-    ),
-    builder: (sheetContext) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 46,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[400],
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            const SizedBox(height: 12),
-            ListTile(
-              leading: const Icon(Icons.unarchive_outlined),
-              title: const Text('Restore to notes'),
-              onTap: () async {
-                Navigator.of(sheetContext).pop();
-                await ref
-                    .read(notesListProvider.notifier)
-                    .unarchiveNote(note.id);
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Note restored to notes.')),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete_outline),
-              title: const Text('Move to trash'),
-              onTap: () async {
-                Navigator.of(sheetContext).pop();
-                await ref.read(notesListProvider.notifier).moveToTrash(note.id);
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Note moved to trash.')),
-                );
-              },
-            ),
-          ],
-        ),
-      );
-    },
-  );
+  const _HeaderIconButton({required this.icon, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: Icon(icon, size: 20),
+      onPressed: onPressed,
+      style: IconButton.styleFrom(
+        backgroundColor: Theme.of(
+          context,
+        ).colorScheme.onSurface.withValues(alpha: 0.05),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+    );
+  }
 }

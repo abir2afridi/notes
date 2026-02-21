@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "555017411804",
+    "project_id": "note2craft",
+    "storage_bucket": "note2craft.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:555017411804:android:2b3e410f694b4ae5266819",
+        "android_client_info": {
+          "package_name": "com.abir2afridi.notecraft"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "555017411804-kcs6crgi2uoa7qh5mdl9q9k68hoamc5b.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.abir2afridi.notecraft",
+            "certificate_hash": "b57d19334ff53a7a7ab5e96d37b3992423b15a78"
+          }
+        },
+        {
+          "client_id": "555017411804-smeb60af0frhpdrcl7rpsi2n5ur15qha.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATAN6ZFLs7__Bh6cTkr1HKzTX2vivg_LY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "555017411804-smeb60af0frhpdrcl7rpsi2n5ur15qha.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

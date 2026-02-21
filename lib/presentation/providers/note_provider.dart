@@ -3,6 +3,7 @@ import '../../domain/entities/note.dart';
 import '../../domain/repositories/note_repository.dart';
 import '../../data/repositories/note_repository_impl.dart';
 import '../../data/datasources/local/local_data_source.dart';
+import 'remote_provider.dart';
 
 /// Provides an initialized [LocalDataSource].
 ///
@@ -15,7 +16,8 @@ final localDataSourceProvider = Provider<LocalDataSource>((ref) {
 // Note provider
 final noteRepositoryProvider = Provider<NoteRepository>((ref) {
   final dataSource = ref.watch(localDataSourceProvider);
-  return NoteRepositoryImpl(dataSource);
+  final remoteDataSource = ref.watch(remoteDataSourceProvider);
+  return NoteRepositoryImpl(dataSource, remoteDataSource);
 });
 
 // Notes list provider
@@ -117,8 +119,13 @@ class NotesListNotifier extends StateNotifier<List<Note>> {
     }
   }
 
-  Future<void> permanentlyDelete(String id) async {
-    await deleteNote(id);
+  Future<void> permanentDelete(String id) async {
+    try {
+      await _repository.permanentlyDeleteNotes([id]);
+      await loadNotes();
+    } catch (e) {
+      // Handle error
+    }
   }
 
   Future<void> emptyTrash() async {

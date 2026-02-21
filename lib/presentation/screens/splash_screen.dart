@@ -121,104 +121,162 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
             ],
           ),
         ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Logo Animation
-              AnimatedBuilder(
-                animation: _logoAnimation,
-                builder: (context, child) {
-                  final opacity = _logoAnimation.value.clamp(0.0, 1.0);
-                  return Opacity(
-                    opacity: opacity,
-                    child: Transform.scale(
-                      scale: _logoAnimation.value,
-                      child: Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(30),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.15),
-                              blurRadius: 30,
-                              offset: const Offset(0, 15),
+        child: Stack(
+          children: [
+            // Mesh Gradient Background
+            Positioned(
+              top: -100,
+              right: -100,
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: -50,
+              left: -50,
+              child: Container(
+                width: 250,
+                height: 250,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.tertiaryContainer.withValues(alpha: 0.2),
+                ),
+              ),
+            ),
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  // Logo Animation
+                  AnimatedBuilder(
+                    animation: Listenable.merge([
+                      _logoAnimation,
+                      _textAnimation,
+                    ]),
+                    builder: (context, child) {
+                      final opacity = _logoAnimation.value.clamp(0.0, 1.0);
+                      return Opacity(
+                        opacity: opacity,
+                        child: Transform.scale(
+                          scale: _logoAnimation.value,
+                          child: Container(
+                            width: 130,
+                            height: 130,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(36),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 40,
+                                  offset: const Offset(0, 20),
+                                ),
+                                BoxShadow(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.primary.withValues(alpha: 0.2),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.edit_note_rounded,
-                          size: 64,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-
-              const SizedBox(height: 48),
-
-              // App Name Animation
-              AnimatedBuilder(
-                animation: _textAnimation,
-                builder: (context, child) {
-                  final opacity = _textAnimation.value.clamp(0.0, 1.0);
-                  return Opacity(
-                    opacity: opacity,
-                    child: Transform.translate(
-                      offset: Offset(0, 20 * (1 - _textAnimation.value)),
-                      child: Column(
-                        children: [
-                          Text(
-                            AppConstants.appName,
-                            style: Theme.of(context).textTheme.displaySmall
-                                ?.copyWith(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -0.5,
-                                ),
+                            child: Icon(
+                              Icons.edit_note_rounded,
+                              size: 72,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
                           ),
-                          const SizedBox(height: 12),
-                          Text(
-                            'Capture ideas instantly',
-                            style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(
-                                  color: Colors.white.withValues(alpha: 0.9),
-                                  letterSpacing: 0.5,
+                        ),
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 48),
+
+                  // App Name Animation
+                  AnimatedBuilder(
+                    animation: _textAnimation,
+                    builder: (context, child) {
+                      final opacity = _textAnimation.value.clamp(0.0, 1.0);
+                      return Opacity(
+                        opacity: opacity,
+                        child: Transform.translate(
+                          offset: Offset(0, 30 * (1 - _textAnimation.value)),
+                          child: Column(
+                            children: [
+                              Text(
+                                AppConstants.appName,
+                                style: Theme.of(context).textTheme.displayMedium
+                                    ?.copyWith(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -1.5,
+                                    ),
+                              ),
+                              const SizedBox(height: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 6,
                                 ),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  'Elevate your thoughts',
+                                  style: Theme.of(context).textTheme.titleSmall
+                                      ?.copyWith(
+                                        color: Colors.white.withValues(
+                                          alpha: 0.9,
+                                        ),
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 1.2,
+                                      ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
+                        ),
+                      );
+                    },
+                  ),
 
-              const SizedBox(height: 80),
+                  const SizedBox(height: 100),
 
-              // Loading Indicator
-              AnimatedBuilder(
-                animation: _textAnimation,
-                builder: (context, child) {
-                  final opacity = _textAnimation.value.clamp(0.0, 1.0);
-                  return Opacity(
-                    opacity: opacity,
-                    child: const SizedBox(
-                      width: 28,
-                      height: 28,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 3,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    ),
-                  );
-                },
+                  // Loading Indicator
+                  AnimatedBuilder(
+                    animation: _textAnimation,
+                    builder: (context, child) {
+                      final opacity = _textAnimation.value.clamp(0.0, 1.0);
+                      return Opacity(
+                        opacity: opacity,
+                        child: const SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.white,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

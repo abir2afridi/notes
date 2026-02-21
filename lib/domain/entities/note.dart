@@ -21,6 +21,7 @@ class Note extends Equatable {
   final String? metadata;
   final double bgOpacity;
   final double toolbarOpacity;
+  final DateTime? deletedAt;
 
   const Note({
     required this.id,
@@ -42,6 +43,7 @@ class Note extends Equatable {
     this.metadata,
     this.bgOpacity = 0.15,
     this.toolbarOpacity = 0.15,
+    this.deletedAt,
   });
 
   Note copyWith({
@@ -64,6 +66,7 @@ class Note extends Equatable {
     RichNoteContent? richContent,
     double? bgOpacity,
     double? toolbarOpacity,
+    DateTime? deletedAt,
   }) {
     return Note(
       id: id ?? this.id,
@@ -85,6 +88,7 @@ class Note extends Equatable {
       richContent: richContent ?? this.richContent,
       bgOpacity: bgOpacity ?? this.bgOpacity,
       toolbarOpacity: toolbarOpacity ?? this.toolbarOpacity,
+      deletedAt: deletedAt ?? this.deletedAt,
     );
   }
 
@@ -109,6 +113,7 @@ class Note extends Equatable {
     richContent,
     bgOpacity,
     toolbarOpacity,
+    deletedAt,
   ];
 }
 

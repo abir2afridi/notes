@@ -1,6 +1,6 @@
-name: note
-description: "A Google Keep-like note-taking app built with Flutter"
-publish_to: 'none'
+name: note_craft
+description: "Note Craft - A beautiful note-taking app built with Flutter"
+publish_to: "none"
 version: 1.0.0+1
 
 environment:
@@ -10,7 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  
+
   # State Management
   flutter_riverpod: ^2.4.9
   riverpod_annotation: ^2.3.3
@@ -25,10 +25,13 @@ dependencies:
   # UI & Material Design
   material_color_utilities: ^0.11.1
   dynamic_color: ^1.6.8
-  
+  flutter_staggered_grid_view: ^0.7.0
+  animations: ^2.0.11
+  google_fonts: ^6.2.1
+
   # Rich Text Editor
   flutter_quill: ^11.5.0
-  
+
   # Icons
   cupertino_icons: ^1.0.6
   font_awesome_flutter: ^10.6.0
@@ -36,10 +39,10 @@ dependencies:
   # Media & Image Handling
   image_picker: ^1.0.4
   cached_network_image: ^3.3.0
-  
+
   # Drawing
   flutter_colorpicker: ^1.0.3
-  
+
   # Utilities
   intl: ^0.20.2
   uuid: ^4.5.2
@@ -47,25 +50,29 @@ dependencies:
   package_info_plus: ^4.2.0
   url_launcher: ^6.2.1
   share_plus: ^7.2.1
-  
+
   # Security (Optional)
   local_auth: ^2.1.6
-  
+
   # Firebase (Feature flagged)
   firebase_core: ^2.24.2
   cloud_firestore: ^4.14.0
   firebase_auth: ^4.16.0
-  
+  google_sign_in: ^6.2.1
+
   # Permissions
   permission_handler: ^11.1.0
   lottie: ^3.3.2
   flutter_markdown: ^0.7.7+1
+  
+  # Notifications
+  flutter_local_notifications: ^17.2.2
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  
+
   # Code Generation
   riverpod_generator: ^2.3.9
   build_runner: ^2.4.7
@@ -73,7 +80,7 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  
+
   assets:
     - assets/images/
     - assets/icons/

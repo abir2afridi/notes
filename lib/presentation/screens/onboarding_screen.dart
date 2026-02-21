@@ -27,26 +27,28 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   static final List<_OnboardingSlide> _slides = [
     _OnboardingSlide(
-      title: 'Capture Everything',
+      title: 'Organize Effortlessly',
       description:
-          'Quickly jot down thoughts, voice memos, and checklists with a tap.',
-      lottieUrl: 'https://assets1.lottiefiles.com/packages/lf20_q5pk6p1k.json',
-      gradient: [Color(0xFF6C63FF), Color(0xFF3F3D56)],
-    ),
-    _OnboardingSlide(
-      title: 'Stay Organized',
-      description:
-          'Group notes with colorful labels, pin favorites, and find anything instantly.',
+          'Create spaces for your thoughts, projects, and daily tasks with powerful organization tools.',
       lottieUrl:
-          'https://assets2.lottiefiles.com/packages/lf20_KvK0ZJBQ0R.json',
-      gradient: [Color(0xFF00B4DB), Color(0xFF0083B0)],
+          'https://assets8.lottiefiles.com/packages/lf20_m6cu9scu.json', // Premium organization animation
+      gradient: [Color(0xFF6750A4), Color(0xFFD0BCFF)],
     ),
     _OnboardingSlide(
-      title: 'Sync & Secure',
+      title: 'Smart Tagging',
       description:
-          'Your ideas stay safe and accessible whether you are online or offline.',
-      lottieUrl: 'https://assets4.lottiefiles.com/packages/lf20_touohxv0.json',
-      gradient: [Color(0xFFFF8748), Color(0xFFFFCC66)],
+          'Our AI automatically categorizes your notes with relevant tags and links.',
+      lottieUrl:
+          'https://assets3.lottiefiles.com/packages/lf20_w51pcehl.json', // Search/AI animation
+      gradient: [Color(0xFF0061A4), Color(0xFFD1E4FF)],
+    ),
+    _OnboardingSlide(
+      title: 'Secure Cloud Sync',
+      description:
+          'Access your notes from any device with real-time Firebase synchronization.',
+      lottieUrl:
+          'https://assets10.lottiefiles.com/packages/lf20_ygl8v08m.json', // Cloud sync animation
+      gradient: [Color(0xFF137FEC), Color(0xFFD3E4FF)],
     ),
   ];
 
@@ -185,7 +187,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         decoration: BoxDecoration(
                           color: _currentPage == index
                               ? theme.colorScheme.primary
-                              : theme.colorScheme.primary.withOpacity(0.25),
+                              : theme.colorScheme.primary.withValues(
+                                  alpha: 0.25,
+                                ),
                           borderRadius: BorderRadius.circular(4),
                         ),
                       ),
@@ -208,7 +212,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                         child: Text(
                           _currentPage == _totalPages - 1
                               ? 'Get Started'
-                              : 'Next',
+                              : 'Next Step',
                           key: ValueKey(_currentPage == _totalPages - 1),
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
@@ -259,7 +263,7 @@ class _OnboardingSlideView extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: dark
-                ? gradient.map((c) => c.withOpacity(0.7)).toList()
+                ? gradient.map((c) => c.withValues(alpha: 0.7)).toList()
                 : gradient,
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -281,7 +285,9 @@ class _OnboardingSlideView extends StatelessWidget {
                     frameRate: FrameRate.max,
                     errorBuilder: (context, error, stackTrace) => Icon(
                       Icons.emoji_objects,
-                      color: theme.colorScheme.onPrimary.withOpacity(0.85),
+                      color: theme.colorScheme.onPrimary.withValues(
+                        alpha: 0.85,
+                      ),
                       size: 120,
                     ),
                   ),
@@ -300,7 +306,7 @@ class _OnboardingSlideView extends StatelessWidget {
                   slide.description,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: theme.colorScheme.onPrimary.withOpacity(0.85),
+                    color: theme.colorScheme.onPrimary.withValues(alpha: 0.85),
                     height: 1.4,
                   ),
                 ),
@@ -337,6 +343,7 @@ class _SetupPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     final vibrantThemes = VibrantThemes.themes.keys.toList();
     final themeModeSegments = <ButtonSegment<AppThemeMode>>[
@@ -358,141 +365,316 @@ class _SetupPage extends StatelessWidget {
     ];
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 64),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 80),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Make it yours',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
+          // Header Section
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [theme.colorScheme.primary, theme.colorScheme.tertiary],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                  blurRadius: 20,
+                  offset: const Offset(0, 10),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Choose your preferred theme, text size, and note color. You can always change these later in Settings.',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text('Theme mode', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 12),
-          SegmentedButton<AppThemeMode>(
-            segments: themeModeSegments,
-            showSelectedIcon: false,
-            selected: {themeMode},
-            onSelectionChanged: (selection) =>
-                onThemeModeChanged(selection.first),
-          ),
-          const SizedBox(height: 24),
-          Text('Color palette', style: theme.textTheme.titleMedium),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: vibrantThemes.map((name) {
-              final colors = VibrantThemes.getThemeColors(name, false);
-              final selected = vibrantTheme == name;
-              return GestureDetector(
-                onTap: () => onVibrantThemeChanged(name),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: selected
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.outlineVariant,
-                      width: selected ? 2.5 : 1.2,
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _ColorSwatchDot(color: colors.primary),
-                          const SizedBox(width: 6),
-                          _ColorSwatchDot(color: colors.secondary),
-                          const SizedBox(width: 6),
-                          _ColorSwatchDot(color: colors.tertiary),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _prettyName(name),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          fontWeight: selected
-                              ? FontWeight.w600
-                              : FontWeight.w500,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.onPrimary.withValues(
+                          alpha: 0.2,
                         ),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ],
+                      child: Icon(
+                        Icons.auto_awesome_rounded,
+                        color: theme.colorScheme.onPrimary,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Text(
+                      'Personalize',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: theme.colorScheme.onPrimary,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Set up your canvas exactly how you want it to be. You can change these later in settings.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onPrimary.withValues(alpha: 0.9),
+                    height: 1.5,
                   ),
                 ),
-              );
-            }).toList(),
+              ],
+            ),
           ),
+
+          const SizedBox(height: 32),
+
+          _buildSectionHeader(context, 'Visual Style', Icons.palette_outlined),
+          const SizedBox(height: 16),
+
+          // Theme Mode
+          Text('Theme mode', style: theme.textTheme.titleSmall),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<AppThemeMode>(
+              segments: themeModeSegments,
+              showSelectedIcon: true,
+              selected: {themeMode},
+              onSelectionChanged: (selection) =>
+                  onThemeModeChanged(selection.first),
+              style: SegmentedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+
           const SizedBox(height: 24),
-          Text('Default note color', style: theme.textTheme.titleMedium),
+
+          // Color Palette
+          Text('Color palette', style: theme.textTheme.titleSmall),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 90,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: vibrantThemes.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final name = vibrantThemes[index];
+                final colors = VibrantThemes.getThemeColors(name, false);
+                final selected = vibrantTheme == name;
+                return GestureDetector(
+                  onTap: () => onVibrantThemeChanged(name),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 100,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? colorScheme.primaryContainer
+                          : colorScheme.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: selected
+                            ? colorScheme.primary
+                            : colorScheme.outlineVariant,
+                        width: selected ? 2 : 1,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _ColorSwatchDot(color: colors.primary),
+                            const SizedBox(width: 4),
+                            _ColorSwatchDot(color: colors.secondary),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _prettyName(name),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            fontWeight: selected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: selected
+                                ? colorScheme.onPrimaryContainer
+                                : colorScheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+
+          const SizedBox(height: 32),
+
+          _buildSectionHeader(
+            context,
+            'Typography & Content',
+            Icons.text_fields_rounded,
+          ),
+          const SizedBox(height: 16),
+
+          // Font Size
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Font size', style: theme.textTheme.titleSmall),
+              Text(
+                '${fontSize.toStringAsFixed(0)}px',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          Slider(
+            value: fontSize,
+            min: 14,
+            max: 24,
+            divisions: 10,
+            onChanged: onFontSizeChanged,
+          ),
+
+          const SizedBox(height: 24),
+
+          // Note Color
+          Text('Default note color', style: theme.textTheme.titleSmall),
           const SizedBox(height: 12),
           Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: AppConstants.noteColors.map((colorHex) {
+            spacing: 10,
+            runSpacing: 10,
+            children: AppConstants.noteColors.take(6).map((colorHex) {
               final selected = noteColor == colorHex;
               final color = AppTheme.getNoteColor(colorHex);
-              final brightness = ThemeData.estimateBrightnessForColor(color);
+              final isLight =
+                  ThemeData.estimateBrightnessForColor(color) ==
+                  Brightness.light;
               return GestureDetector(
                 onTap: () => onNoteColorChanged(colorHex),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  width: 44,
-                  height: 44,
+                  width: 42,
+                  height: 42,
                   decoration: BoxDecoration(
                     color: color,
-                    borderRadius: BorderRadius.circular(14),
+                    shape: BoxShape.circle,
                     border: Border.all(
                       color: selected
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.outlineVariant,
-                      width: selected ? 3 : 1.2,
+                          ? colorScheme.primary
+                          : colorScheme.outlineVariant.withValues(alpha: 0.3),
+                      width: selected ? 3 : 1,
                     ),
                   ),
                   child: selected
                       ? Icon(
                           Icons.check,
-                          color: brightness == Brightness.dark
-                              ? Colors.white
-                              : Colors.black,
+                          size: 20,
+                          color: isLight ? Colors.black : Colors.white,
                         )
                       : null,
                 ),
               );
             }).toList(),
           ),
-          const SizedBox(height: 24),
-          Text('Default font size', style: theme.textTheme.titleMedium),
+
+          const SizedBox(height: 32),
+
+          _buildSectionHeader(
+            context,
+            'Connectivity',
+            Icons.cloud_done_outlined,
+          ),
           const SizedBox(height: 12),
-          SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              trackHeight: 4,
-              showValueIndicator: ShowValueIndicator.always,
+
+          // Sync Information
+          // Sync Information
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest.withValues(
+                alpha: 0.3,
+              ),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: theme.colorScheme.outline.withValues(alpha: 0.1),
+              ),
             ),
-            child: Slider(
-              value: fontSize,
-              min: 14,
-              max: 24,
-              divisions: 10,
-              label: fontSize.toStringAsFixed(0),
-              onChanged: onFontSizeChanged,
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.sync_rounded,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Cloud Sync Ready',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Your notes will be automatically synchronized across all your devices.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          height: 1.4,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSectionHeader(
+    BuildContext context,
+    String title,
+    IconData icon,
+  ) {
+    final theme = Theme.of(context);
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: theme.colorScheme.primary),
+        const SizedBox(width: 8),
+        Text(
+          title.toUpperCase(),
+          style: theme.textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+      ],
     );
   }
 
@@ -514,7 +696,10 @@ class _ColorSwatchDot extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.black.withOpacity(0.08), width: 1),
+        border: Border.all(
+          color: Colors.black.withValues(alpha: 0.08),
+          width: 1,
+        ),
       ),
     );
   }
